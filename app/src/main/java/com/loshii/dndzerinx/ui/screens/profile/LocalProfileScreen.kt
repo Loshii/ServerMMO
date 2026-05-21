@@ -48,10 +48,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import coil.size.Size
 import com.google.firebase.auth.FirebaseAuth
 import com.loshii.dndzerinx.data.LocalProfileManager
+import com.loshii.dndzerinx.util.CoilGifImage
 import com.loshii.dndzerinx.util.ImageUploader
 import com.loshii.dndzerinx.viewmodel.AuthViewModel
 import com.loshii.dndzerinx.viewmodel.ImageType
@@ -121,11 +122,12 @@ fun LocalProfileScreen(
             ) {
                 val avatarUrl = profile?.avatarUrl?.takeIf { it.isNotBlank() } ?: user?.avatarUrl
                 if (!avatarUrl.isNullOrBlank()) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(context).data(avatarUrl).crossfade(true).build(),
+                    CoilGifImage(
+                        model = avatarUrl,
                         contentDescription = "Avatar",
                         modifier = Modifier.fillMaxSize().clip(CircleShape)
-                            .border(3.dp, Color(0xFF2196F3), CircleShape)
+                            .border(3.dp, Color(0xFF2196F3), CircleShape),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
                     )
                 } else {
                     Box(

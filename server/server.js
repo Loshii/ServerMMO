@@ -1,11 +1,87 @@
+const express = require('express');
 const { WebSocketServer } = require('ws');
+const multer = require('multer');
+const cors = require('cors');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 
 const PORT = process.env.PORT || 8080;
+const UPLOAD_DIR = path.join(__dirname, 'uploads');
+
+if (!fs.existsSync(UPLOAD_DIR)) {
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+}
+
+const app = express();
+app.use(cors());
+app.use('/uploads', express.static(UPLOAD_DIR));
+app.use(express.json());
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname) || '.jpg';
+    cb(null, `${crypto.randomUUID()}${ext}`);
+  }
+});
+const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
+
+app.post('/api/upload', upload.single('image'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No image provided' });
+  const url = `/uploads/${req.file.filename}`;
+  res.json({ url });
+});
+
+app.post('/api/progression', (req, res) => {
+  const { playerId, xp, gold, level, attackPower, defense, maxHp, hp, displayName, characterClass, race } = req.body;
+  if (!playerId) return res.status(400).json({ error: 'playerId required' });
+
+  const player = players.get(playerId);
+  if (player) {
+    if (xp !== undefined) player.xp = xp;
+    if (gold !== undefined) player.gold = gold;
+    if (level !== undefined) player.level = level;
+    if (attackPower !== undefined) player.attackPower = attackPower;
+    if (defense !== undefined) player.defense = defense;
+    if (maxHp !== undefined) player.maxHp = maxHp;
+    if (hp !== undefined) player.hp = hp;
+    if (displayName !== undefined) player.displayName = displayName;
+    if (characterClass !== undefined) player.characterClass = characterClass;
+    if (race !== undefined) player.race = race;
+  }
+
+  if (!playerProgression.has(playerId)) {
+    playerProgression.set(playerId, {
+      playerId, xp: 0, gold: 0, level: 1, attackPower: 10, defense: 5, maxHp: 100, hp: 100,
+      displayName: 'Jugador', characterClass: 'Guerrero', race: 'Humano', avatarUrl: ''
+    });
+  }
+  const prog = playerProgression.get(playerId);
+  if (xp !== undefined) prog.xp = xp;
+  if (gold !== undefined) prog.gold = gold;
+  if (level !== undefined) prog.level = level;
+  if (attackPower !== undefined) prog.attackPower = attackPower;
+  if (defense !== undefined) prog.defense = defense;
+  if (maxHp !== undefined) prog.maxHp = maxHp;
+  if (hp !== undefined) prog.hp = hp;
+  if (displayName !== undefined) prog.displayName = displayName;
+  if (characterClass !== undefined) prog.characterClass = characterClass;
+  if (race !== undefined) prog.race = race;
+
+  res.json({ success: true, progression: prog });
+});
+
+app.get('/api/progression/:playerId', (req, res) => {
+  const prog = playerProgression.get(req.params.playerId);
+  if (!prog) return res.status(404).json({ error: 'Not found' });
+  res.json(prog);
+});
 
 // Game state
 const players = new Map();
 const monsters = new Map();
+const playerProgression = new Map();
 
 const MONSTER_TYPES = {
   ABERRATION:     { name: 'Aberración',        baseHp: 60,  baseAtk: 12, baseDef: 8,  xpReward: 30,  aggressionRange: 200 },
@@ -130,47 +206,16 @@ function distance(x1, y1, x2, y2) {
   return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
 }
 
-function spawnMonster() {
-  if (monsters.size >= MAX_MONSTERS) return;
-
-  const roll = Math.random();
-  let pool;
-  if (roll < 0.4) {
-    pool = ['SLIME', 'WOLF', 'SKELETON', 'KOBOLD', 'GNOLL', 'SPIDER', 'ZOMBIE', 'HOBOGOBLIN', 'STIRGE', 'SPRITE'];
-  } else if (roll < 0.7) {
-    pool = ['BUGBEAR', 'OGRE', 'HARPY', 'GARGOYLE', 'MIMIC', 'GRICK', 'ETTERCAP', 'OWLBEAR', 'GITHYANKI', 'GITHZERAI'];
-  } else if (roll < 0.9) {
-    pool = ['TROLL', 'MINOTAUR', 'HYDRA', 'CHIMERA', 'GRIFFON', 'MANTICORE', 'MEDUSA', 'VAMPIRE', 'WEREWOLF', 'WYVERN'];
-  } else {
-    pool = ['DRAGON_RED', 'DRAGON_BLUE', 'DRAGON_GREEN', 'BEHOLDER', 'LICH', 'DEATH_KNIGHT', 'PURPLE_WORM', 'RAKSHASA', 'DEMON_GLABREZU', 'DEVIL_HORNED'];
-  }
-
-  const typeKey = pool[Math.floor(Math.random() * pool.length)];
-  spawnMonsterOfType(typeKey);
-}
-
 function spawnInitialMonsters() {
-  const commonTypes = ['SLIME', 'WOLF', 'SKELETON', 'KOBOLD', 'GNOLL', 'SPIDER', 'ZOMBIE', 'GOBLIN', 'HOBOGOBLIN', 'STIRGE'];
-  const uncommonTypes = ['BUGBEAR', 'OGRE', 'GHOUL', 'GHAST', 'HARPY', 'GARGOYLE', 'MIMIC', 'GRICK', 'ETTERCAP', 'OWLBEAR'];
+  const commonTypes = ['SLIME', 'WOLF', 'SKELETON', 'KOBOLD', 'GNOLL', 'SPIDER', 'ZOMBIE', 'HOBOGOBLIN', 'STIRGE', 'SPRITE'];
+  const uncommonTypes = ['BUGBEAR', 'OGRE', 'HARPY', 'GARGOYLE', 'MIMIC', 'GRICK', 'ETTERCAP', 'OWLBEAR', 'GITHYANKI', 'GITHZERAI'];
   const rareTypes = ['TROLL', 'MINOTAUR', 'HYDRA', 'CHIMERA', 'GRIFFON', 'MANTICORE', 'MEDUSA', 'VAMPIRE', 'WEREWOLF', 'WYVERN'];
   const epicTypes = ['DRAGON_RED', 'DRAGON_BLUE', 'DRAGON_GREEN', 'DRAGON_BLACK', 'DRAGON_WHITE', 'DRAGON_GOLD', 'BEHOLDER', 'LICH', 'DEATH_KNIGHT', 'PURPLE_WORM'];
 
-  for (let i = 0; i < 4; i++) {
-    const type = commonTypes[Math.floor(Math.random() * commonTypes.length)];
-    spawnMonsterOfType(type);
-  }
-  for (let i = 0; i < 3; i++) {
-    const type = uncommonTypes[Math.floor(Math.random() * uncommonTypes.length)];
-    spawnMonsterOfType(type);
-  }
-  for (let i = 0; i < 2; i++) {
-    const type = rareTypes[Math.floor(Math.random() * rareTypes.length)];
-    spawnMonsterOfType(type);
-  }
-  if (Math.random() < 0.3) {
-    const type = epicTypes[Math.floor(Math.random() * epicTypes.length)];
-    spawnMonsterOfType(type);
-  }
+  for (let i = 0; i < 4; i++) spawnMonsterOfType(commonTypes[Math.floor(Math.random() * commonTypes.length)]);
+  for (let i = 0; i < 3; i++) spawnMonsterOfType(uncommonTypes[Math.floor(Math.random() * uncommonTypes.length)]);
+  for (let i = 0; i < 2; i++) spawnMonsterOfType(rareTypes[Math.floor(Math.random() * rareTypes.length)]);
+  if (Math.random() < 0.3) spawnMonsterOfType(epicTypes[Math.floor(Math.random() * epicTypes.length)]);
 }
 
 function spawnMonsterOfType(typeKey) {
@@ -199,12 +244,21 @@ function spawnMonsterOfType(typeKey) {
   broadcast({ type: 'MonsterSpawned', monsterId: id, type: type.name, x: monster.x, y: monster.y, level, hp: monster.hp, maxHp: monster.maxHp });
 }
 
+function spawnMonster() {
+  if (monsters.size >= MAX_MONSTERS) return;
+  const roll = Math.random();
+  let pool;
+  if (roll < 0.4) pool = ['SLIME', 'WOLF', 'SKELETON', 'KOBOLD', 'GNOLL', 'SPIDER', 'ZOMBIE', 'HOBOGOBLIN', 'STIRGE', 'SPRITE'];
+  else if (roll < 0.7) pool = ['BUGBEAR', 'OGRE', 'HARPY', 'GARGOYLE', 'MIMIC', 'GRICK', 'ETTERCAP', 'OWLBEAR', 'GITHYANKI', 'GITHZERAI'];
+  else if (roll < 0.9) pool = ['TROLL', 'MINOTAUR', 'HYDRA', 'CHIMERA', 'GRIFFON', 'MANTICORE', 'MEDUSA', 'VAMPIRE', 'WEREWOLF', 'WYVERN'];
+  else pool = ['DRAGON_RED', 'DRAGON_BLUE', 'DRAGON_GREEN', 'BEHOLDER', 'LICH', 'DEATH_KNIGHT', 'PURPLE_WORM', 'RAKSHASA', 'DEMON_GLABREZU', 'DEVIL_HORNED'];
+  spawnMonsterOfType(pool[Math.floor(Math.random() * pool.length)]);
+}
+
 function broadcast(message, excludeId = null) {
   const data = JSON.stringify(message);
   players.forEach((player, id) => {
-    if (id !== excludeId && player.ws.readyState === 1) {
-      player.ws.send(data);
-    }
+    if (id !== excludeId && player.ws.readyState === 1) player.ws.send(data);
   });
 }
 
@@ -240,7 +294,6 @@ function updateMonsters() {
     }, { player: null, dist: Infinity });
 
     if (!nearest.player) return;
-
     const distToPlayer = nearest.dist;
 
     if (monster.state === 'PATROL') {
@@ -269,7 +322,7 @@ function updateMonsters() {
         if (now - monster.lastAttackTime >= monster.attackCooldown) {
           monster.lastAttackTime = now;
           const type = MONSTER_TYPES[monster.type];
-          const damage = calculateDamage(type.baseAtk + monster.level * 2, 5);
+          const damage = calculateDamage(type.baseAtk + monster.level * 2, nearest.player.defense || 5);
           nearest.player.hp = Math.max(0, nearest.player.hp - damage);
           if (nearest.player.hp <= 0) {
             nearest.player.isDead = true;
@@ -287,17 +340,13 @@ function updateMonsters() {
         }
       }
     } else if (monster.state === 'ATTACK') {
-      if (distToPlayer > monster.attackRange * 1.5) {
-        monster.state = 'CHASE';
-      }
+      if (distToPlayer > monster.attackRange * 1.5) monster.state = 'CHASE';
     }
   });
 }
 
-// WebSocket server
-const wss = new WebSocketServer({ port: PORT });
-
-wss.on('listening', () => {
+// HTTP server
+const server = app.listen(PORT, () => {
   console.log(`D&D MMO Server running on port ${PORT}`);
   spawnInitialMonsters();
   setInterval(() => {
@@ -305,6 +354,9 @@ wss.on('listening', () => {
     if (Math.random() < 0.3) spawnMonster();
   }, 50);
 });
+
+// WebSocket server
+const wss = new WebSocketServer({ server });
 
 wss.on('connection', (ws) => {
   let playerId = null;
@@ -316,15 +368,24 @@ wss.on('connection', (ws) => {
     switch (msg.type) {
       case 'Join': {
         playerId = msg.playerId;
+        const prog = playerProgression.get(playerId) || {
+          xp: 0, gold: 0, level: msg.level || 1, attackPower: 10, defense: 5, maxHp: msg.maxHp || 100,
+          displayName: msg.playerName || 'Jugador', characterClass: 'Guerrero', race: 'Humano', avatarUrl: ''
+        };
+
         players.set(playerId, {
-          id: playerId, name: msg.playerName, level: msg.level, maxHp: msg.maxHp,
+          id: playerId, name: prog.displayName, level: prog.level, maxHp: prog.maxHp,
           x: WORLD_WIDTH / 2 + Math.random() * 200 - 100,
           y: WORLD_HEIGHT / 2 + Math.random() * 200 - 100,
-          hp: msg.maxHp, isDead: false, lastAttackTime: 0, ws
+          hp: msg.maxHp || prog.maxHp, isDead: false, lastAttackTime: 0, ws,
+          xp: prog.xp, gold: prog.gold, attackPower: prog.attackPower, defense: prog.defense,
+          displayName: prog.displayName, characterClass: prog.characterClass, race: prog.race, avatarUrl: prog.avatarUrl
         });
 
         sendTo(ws, { type: 'Welcome', playerId, worldTime: Date.now() });
         sendTo(ws, { type: 'WorldState', players: Array.from(players.values()).filter(p => p.id !== playerId).map(p => ({ id: p.id, name: p.name, x: p.x, y: p.y, hp: p.hp, maxHp: p.maxHp, level: p.level, isDead: p.isDead })), monsters: Array.from(monsters.values()).filter(m => !m.isDead).map(m => ({ id: m.id, type: m.typeName, x: m.x, y: m.y, hp: m.hp, maxHp: m.maxHp, level: m.level, isDead: m.isDead })) });
+        const p = players.get(playerId);
+        sendTo(ws, { type: 'PlayerProgression', playerId, level: p.level, xp: p.xp, gold: p.gold, attackPower: p.attackPower, defense: p.defense, maxHp: p.maxHp, displayName: p.displayName, characterClass: p.characterClass, race: p.race, avatarUrl: p.avatarUrl });
         broadcast({ type: 'PlayerJoined', playerId, name: msg.playerName, x: players.get(playerId).x, y: players.get(playerId).y, level: msg.level }, playerId);
         break;
       }
@@ -350,7 +411,7 @@ wss.on('connection', (ws) => {
         if (dist > 60) break;
 
         player.lastAttackTime = now;
-        const damage = calculateDamage(10 + player.level * 2, MONSTER_TYPES[monster.type]?.baseDef || 0);
+        const damage = calculateDamage(player.attackPower || (10 + player.level * 2), MONSTER_TYPES[monster.type]?.baseDef || 0);
         const isCrit = Math.random() < 0.15;
         const finalDamage = isCrit ? damage * 2 : damage;
         monster.hp -= finalDamage;
@@ -360,8 +421,30 @@ wss.on('connection', (ws) => {
         if (monster.hp <= 0) {
           monster.isDead = true;
           monster.respawnTime = now + 10000;
-          broadcast({ type: 'MonsterDied', monsterId: msg.monsterId, killedBy: playerId, xpReward: MONSTER_TYPES[monster.type]?.xpReward * monster.level || 10, goldReward: Math.floor(Math.random() * 10) * monster.level });
-          sendTo(ws, { type: 'MonsterDied', monsterId: msg.monsterId, killedBy: playerId, xpReward: MONSTER_TYPES[monster.type]?.xpReward * monster.level || 10, goldReward: Math.floor(Math.random() * 10) * monster.level });
+          const xpReward = (MONSTER_TYPES[monster.type]?.xpReward || 10) * monster.level;
+          const goldReward = Math.floor(Math.random() * 10) * monster.level;
+
+          player.xp += xpReward;
+          player.gold += goldReward;
+
+          const xpToLevel = player.level * 100;
+          let leveledUp = false;
+          while (player.xp >= xpToLevel) {
+            player.xp -= xpToLevel;
+            player.level += 1;
+            player.maxHp += 10;
+            player.hp = player.maxHp;
+            player.attackPower += 2;
+            player.defense += 1;
+            leveledUp = true;
+          }
+
+          broadcast({ type: 'MonsterDied', monsterId: msg.monsterId, killedBy: playerId, xpReward, goldReward });
+          sendTo(ws, { type: 'MonsterDied', monsterId: msg.monsterId, killedBy: playerId, xpReward, goldReward });
+          if (leveledUp) {
+            sendTo(ws, { type: 'PlayerLevelUp', playerId, level: player.level, maxHp: player.maxHp, attackPower: player.attackPower, defense: player.defense });
+          }
+          sendTo(ws, { type: 'PlayerProgression', playerId, level: player.level, xp: player.xp, gold: player.gold, attackPower: player.attackPower, defense: player.defense, maxHp: player.maxHp });
         } else {
           broadcast({ type: 'MonsterDamaged', monsterId: msg.monsterId, damage: finalDamage, currentHp: monster.hp, maxHp: monster.maxHp });
         }
@@ -388,6 +471,20 @@ wss.on('connection', (ws) => {
 
       case 'Ping': {
         sendTo(ws, { type: 'Welcome', playerId: playerId || 'unknown', worldTime: Date.now() });
+        break;
+      }
+
+      case 'UpdateAvatar': {
+        const player = players.get(playerId);
+        if (player && msg.avatarUrl) {
+          player.avatarUrl = msg.avatarUrl;
+          if (!playerProgression.has(playerId)) {
+            playerProgression.set(playerId, { playerId, xp: 0, gold: 0, level: 1, attackPower: 10, defense: 5, maxHp: 100, hp: 100, displayName: player.name, characterClass: 'Guerrero', race: 'Humano', avatarUrl: msg.avatarUrl });
+          } else {
+            playerProgression.get(playerId).avatarUrl = msg.avatarUrl;
+          }
+          sendTo(ws, { type: 'AvatarUpdated', playerId, avatarUrl: msg.avatarUrl });
+        }
         break;
       }
     }

@@ -38,6 +38,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.ImageLoader
 import coil.compose.AsyncImage
+import coil.size.Size
+import com.loshii.dndzerinx.util.CoilGifImage
 import coil.request.ImageRequest
 import coil.request.SuccessResult
 import com.loshii.dndzerinx.data.LocalProfile
@@ -488,15 +490,13 @@ private fun ProfileDialog(
                 ) {
                     val imgUrl = profile?.avatarUrl?.takeIf { it.isNotBlank() } ?: user?.avatarUrl
                     if (!imgUrl.isNullOrBlank()) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(LocalContext.current)
-                                .data(imgUrl)
-                                .crossfade(true)
-                                .build(),
+                        CoilGifImage(
+                            model = imgUrl,
                             contentDescription = "Avatar",
                             modifier = Modifier
                                 .fillMaxSize()
-                                .clip(CircleShape)
+                                .clip(CircleShape),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
                         )
                     } else {
                         Box(
