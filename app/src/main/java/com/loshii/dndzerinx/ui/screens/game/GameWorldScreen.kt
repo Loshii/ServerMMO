@@ -3,7 +3,6 @@ package com.loshii.dndzerinx.ui.screens.game
 import android.graphics.Paint
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -12,9 +11,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.path
+import com.loshii.dndzerinx.ui.icons.GameIcons
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -51,7 +54,10 @@ import com.loshii.dndzerinx.model.game.MonsterType
 import com.loshii.dndzerinx.model.game.Vector2
 import com.loshii.dndzerinx.model.game.WorldBounds
 import com.loshii.dndzerinx.network.GameClient
+import com.loshii.dndzerinx.network.ServerConfig
 import com.loshii.dndzerinx.network.ServerMessage
+import com.loshii.dndzerinx.engine.GodotLauncher
+import com.loshii.dndzerinx.ui.screens.game.GameHud
 import com.loshii.dndzerinx.viewmodel.AuthViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -135,7 +141,7 @@ fun GameWorldScreen(
         val profile = localProfileManager.profile.first()
         if (user != null && !isConnected) {
             gameClient.connect(
-                serverUrl = "wss://servermmo.onrender.com",
+                serverUrl = ServerConfig.GAME_WEBSOCKET_URL,
                 playerId = user!!.id,
                 playerName = profile.displayName,
                 level = profile.level,
@@ -244,11 +250,14 @@ fun GameWorldScreen(
     var lastMoveSend by remember { mutableStateOf(0L) }
     var canvasSize by remember { mutableStateOf(androidx.compose.ui.geometry.Size.Zero) }
     var showProfileDialog by remember { mutableStateOf(false) }
-    var showMenu by remember { mutableStateOf(false) }
+    var moveDirection by remember { mutableStateOf(Vector2(0f, 0f)) }
 
     LaunchedEffect(Unit) {
         while (isRunning) {
             currentTime = System.currentTimeMillis()
+            if (moveDirection != Vector2(0f, 0f)) {
+                gameWorld.movePlayer(moveDirection, 0.016f)
+            }
             gameWorld.update(0.016f, currentTime)
 
             val now = System.currentTimeMillis()
@@ -341,7 +350,7 @@ fun GameWorldScreen(
                 drawRemotePlayer(player, cameraOffset, canvasWidth, canvasHeight)
             }
 
-            drawPlayer(gameWorld, cameraOffset, canvasWidth, canvasHeight, playerAvatar)
+            drawPlayer(gameWorld, cameraOffset, playerAvatar)
 
             localDamageNumbers.forEach { dn ->
                 drawDamageNumber(dn, cameraOffset, currentTime)
@@ -351,46 +360,42 @@ fun GameWorldScreen(
             }
         }
 
-        Box(modifier = Modifier.fillMaxSize().padding(12.dp)) {
-            IconButton(onClick = { showMenu = !showMenu }) {
-                Icon(Icons.Default.Menu, contentDescription = "Menú", tint = Color.White)
-            }
-        }
-
-        if (showMenu) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.5f))
-                    .clickable { showMenu = false }
-            ) {
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(16.dp)
-                        .background(Color(0xFF1E1E1E), RoundedCornerShape(12.dp))
-                        .padding(16.dp)
-                        .width(200.dp)
-                ) {
-                    MenuItem(Icons.Default.Person, "Perfil") {
-                        showMenu = false
-                        showProfileDialog = true
-                    }
-                    MenuItem(Icons.Default.List, "Inventario") {
-                        showMenu = false
-                        onNavigateToProfile()
-                    }
-                    MenuItem(Icons.Default.Settings, "Ajustes") {
-                        showMenu = false
-                        onNavigateToSettings()
-                    }
-                    MenuItem(Icons.Default.ExitToApp, "Cerrar sesión") {
-                        showMenu = false
-                        onSignOut()
+        GameHud(
+            playerName = localProfile?.displayName ?: user?.displayName ?: "Aventurero",
+            playerLevel = gameWorld.playerLevel,
+            playerHp = gameWorld.playerHp,
+            playerMaxHp = gameWorld.playerMaxHp,
+            isConnected = isConnected,
+            onOpenProfile = { showProfileDialog = true },
+            onOpenSettings = onNavigateToSettings,
+            onSignOut = onSignOut,
+            onLaunchGodot = {
+                val currentPlayerId = user?.id ?: return@GameHud
+                val currentPlayerName = localProfile?.displayName ?: user?.displayName ?: "Aventurero"
+                GodotLauncher.launchGodot(
+                    context = context,
+                    playerId = currentPlayerId,
+                    playerName = currentPlayerName,
+                    level = gameWorld.playerLevel,
+                    maxHp = gameWorld.playerMaxHp,
+                    accessKey = user?.accessKey ?: "",
+                    serverUrl = ServerConfig.GAME_WEBSOCKET_URL
+                )
+            },
+            onAttack = {
+                val target = gameWorld.monsters.filter { !it.isDead() }
+                    .minByOrNull { it.position.distanceTo(gameWorld.playerPosition) }
+                if (target != null) {
+                    if (isConnected) {
+                        gameClient.sendAttack(target.id)
+                    } else {
+                        gameWorld.attackNearestMonster(currentTime)
                     }
                 }
-            }
-        }
+            },
+            onMoveDirection = { direction -> moveDirection = direction },
+            onStopMoving = { moveDirection = Vector2(0f, 0f) }
+        )
 
         if (gameWorld.playerState == EntityState.DEAD) {
             Surface(
@@ -417,7 +422,7 @@ fun GameWorldScreen(
             }
         }
 
-        if (showProfileDialog) {
+            if (showProfileDialog) {
             ProfileDialog(
                 profile = localProfile,
                 user = user,
@@ -427,131 +432,6 @@ fun GameWorldScreen(
                     onNavigateToProfile()
                 }
             )
-        }
-    }
-}
-
-@Composable
-private fun MenuItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(label, color = Color.White, fontSize = 16.sp)
-    }
-}
-
-@Composable
-private fun ProfileDialog(
-    profile: LocalProfile?,
-    user: com.loshii.dndzerinx.model.User?,
-    onDismiss: () -> Unit,
-    onEditProfile: () -> Unit
-) {
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.7f)
-                .padding(16.dp),
-            shape = RoundedCornerShape(16.dp),
-            color = Color(0xFF1E1E1E)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(24.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Perfil", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = Color.White)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Box(
-                    modifier = Modifier
-                        .size(100.dp)
-                        .align(Alignment.CenterHorizontally)
-                ) {
-                    val imgUrl = profile?.avatarUrl?.takeIf { it.isNotBlank() } ?: user?.avatarUrl
-                    if (!imgUrl.isNullOrBlank()) {
-                        CoilGifImage(
-                            model = imgUrl,
-                            contentDescription = "Avatar",
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(CircleShape),
-                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
-                        )
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color(0xFF2196F3), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = (profile?.displayName ?: "Jugador").take(1).uppercase(),
-                                color = Color.White,
-                                fontSize = 36.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = profile?.displayName ?: "Jugador",
-                    color = Color.White,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                )
-
-                Text(
-                    text = "${profile?.race ?: "Humano"} - ${profile?.characterClass ?: "Guerrero"}",
-                    color = Color(0xFFBBBBBB),
-                    fontSize = 14.sp,
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    StatRow("Nivel", "${profile?.level ?: 1}")
-                    StatRow("XP", "${profile?.xp ?: 0} / ${(profile?.level ?: 1) * 100}")
-                    StatRow("Oro", "${profile?.gold ?: 0}")
-                    StatRow("HP", "${profile?.hp ?: 100} / ${profile?.maxHp ?: 100}")
-                    StatRow("Ataque", "${profile?.attackPower ?: 10}")
-                    StatRow("Defensa", "${profile?.defense ?: 5}")
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Button(
-                    onClick = onEditProfile,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E88E5))
-                ) {
-                    Icon(Icons.Default.Edit, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Editar perfil")
-                }
-            }
         }
     }
 }
@@ -634,8 +514,6 @@ private fun DrawScope.drawMonster(
 private fun DrawScope.drawPlayer(
     gameWorld: GameWorld,
     cameraOffset: Vector2,
-    canvasWidth: Float,
-    canvasHeight: Float,
     avatar: ImageBitmap?
 ) {
     val screenX = gameWorld.playerPosition.x - cameraOffset.x

@@ -23,16 +23,19 @@ Proyecto Android en Kotlin para seguir campañas de rol con Firebase y una inter
 - **Character Sheet**: Ficha de personaje 5E
 - **Rules 5e**: Resumen de reglas SRD
 - **Class Library**: Biblioteca de clases 5E
+- **Integración Godot**: Base de integración descrita en `docs/GODOT_INTEGRATION.md`
 
 ## Modelos
 
 ### User
+
 - id, displayName, email
 - avatarUrl, bannerUrl
 - level, role, tags
 - wallet (gold, silver, copper, gems)
 
 ### CharacterSheet
+
 - 6 stats con modificadores
 - HP, CA, Iniciativa
 - Wallet integrado

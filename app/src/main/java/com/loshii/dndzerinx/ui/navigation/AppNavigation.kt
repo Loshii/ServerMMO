@@ -36,7 +36,6 @@ import com.google.firebase.auth.FirebaseAuth
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.loshii.dndzerinx.ui.components.CollapsibleBottomNavBar
 import com.loshii.dndzerinx.ui.screens.auth.AuthScreen
 import com.loshii.dndzerinx.ui.screens.chat.ChatScreen
 import com.loshii.dndzerinx.ui.screens.library.ClassLibraryScreen
@@ -57,8 +56,6 @@ sealed class Screen(val route: String) {
     data object GameWorld : Screen("gameworld")
 }
 
-private val bottomNavRoutes = listOf("library", "chat", "profile", "settings")
-
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
@@ -67,9 +64,6 @@ fun AppNavigation() {
     val auth = FirebaseAuth.getInstance()
     val authViewModel: AuthViewModel = viewModel()
     val startDestination = if (auth.currentUser != null) Screen.GameWorld.route else Screen.Auth.route
-
-    val showBottomBar = currentRoute in bottomNavRoutes
-    var isBottomNavVisible by remember { mutableStateOf(true) }
 
     val user by authViewModel.currentUser.collectAsState()
     val globalAccessKey by authViewModel.globalAccessKey.collectAsState()
@@ -293,23 +287,5 @@ fun AppNavigation() {
             )
         }
 
-        if (showBottomBar && currentRoute != Screen.Auth.route) {
-            CollapsibleBottomNavBar(
-                currentRoute = currentRoute,
-                onTabSelected = { tab ->
-                    when (tab) {
-                        "library" -> navController.navigate(Screen.Library.route) { popUpTo(Screen.Library.route) { inclusive = true } }
-                        "chat" -> navController.navigate(Screen.Chat.route)
-                        "profile" -> navController.navigate(Screen.Profile.route) { popUpTo(Screen.Profile.route) { inclusive = true } }
-                        "create" -> navController.navigate(Screen.Character.route)
-                    }
-                },
-                isVisible = isBottomNavVisible,
-                onToggleVisibility = { isBottomNavVisible = !isBottomNavVisible },
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .navigationBarsPadding()
-            )
-        }
     }
 }

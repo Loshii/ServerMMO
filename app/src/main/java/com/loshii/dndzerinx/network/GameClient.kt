@@ -1,8 +1,6 @@
 package com.loshii.dndzerinx.network
 
 import android.util.Log
-import com.loshii.dndzerinx.model.game.MonsterType
-import com.loshii.dndzerinx.model.game.Vector2
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,7 +11,6 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import okhttp3.*
 import okhttp3.WebSocket
-import okio.ByteString
 import java.util.concurrent.TimeUnit
 
 @Serializable
@@ -54,8 +51,23 @@ class GameClient {
         private val json = Json { ignoreUnknownKeys = true }
     }
 
+    private data class ConnectParams(
+        val serverUrl: String,
+        val playerId: String,
+        val playerName: String,
+        val level: Int,
+        val maxHp: Int
+    )
+
     private var webSocket: WebSocket? = null
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val client = OkHttpClient.Builder()
+        .readTimeout(0, TimeUnit.MILLISECONDS)
+        .pingInterval(15, TimeUnit.SECONDS)
+        .build()
+    private val reconnectScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private var reconnectJob: Job? = null
+    private var manualDisconnect = false
+    private var pendingConnect: ConnectParams? = null
 
     private val _connected = MutableStateFlow(false)
     val connected: StateFlow<Boolean> = _connected.asStateFlow()
@@ -72,47 +84,17 @@ class GameClient {
     var onMessage: ((ServerMessage) -> Unit)? = null
 
     fun connect(serverUrl: String, playerId: String, playerName: String, level: Int, maxHp: Int) {
-        val request = Request.Builder()
-            .url(serverUrl)
-            .build()
-
-        webSocket = OkHttpClient.Builder()
-            .readTimeout(0, TimeUnit.MILLISECONDS)
-            .build()
-            .newWebSocket(request, object : WebSocketListener() {
-                override fun onOpen(webSocket: WebSocket, response: Response) {
-                    Log.d(TAG, "WebSocket connected")
-                    _connected.value = true
-                    send(ClientMessage.Join(playerId, playerName, level, maxHp))
-                }
-
-                override fun onMessage(webSocket: WebSocket, text: String) {
-                    try {
-                        val message = json.decodeFromString<ServerMessage>(text)
-                        handleMessage(message)
-                        onMessage?.invoke(message)
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error parsing message: ${e.message}")
-                    }
-                }
-
-                override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-                    Log.d(TAG, "WebSocket closed: $reason")
-                    _connected.value = false
-                }
-
-                override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                    Log.e(TAG, "WebSocket error: ${t.message}")
-                    _connected.value = false
-                }
-            })
+        manualDisconnect = false
+        pendingConnect = ConnectParams(serverUrl, playerId, playerName, level, maxHp)
+        createWebSocket()
     }
 
     fun disconnect() {
+        manualDisconnect = true
+        reconnectJob?.cancel()
         webSocket?.close(1000, "Client disconnect")
         webSocket = null
         _connected.value = false
-        scope.cancel()
     }
 
     fun sendMove(x: Float, y: Float) {
@@ -133,6 +115,60 @@ class GameClient {
 
     fun sendPing() {
         send(ClientMessage.Ping)
+    }
+
+    private fun createWebSocket() {
+        val params = pendingConnect ?: return
+        if (webSocket != null) return
+
+        val request = Request.Builder()
+            .url(params.serverUrl)
+            .build()
+
+        webSocket = client.newWebSocket(request, object : WebSocketListener() {
+            override fun onOpen(webSocket: WebSocket, response: Response) {
+                Log.d(TAG, "WebSocket connected")
+                _connected.value = true
+                reconnectJob?.cancel()
+                send(ClientMessage.Join(params.playerId, params.playerName, params.level, params.maxHp))
+            }
+
+            override fun onMessage(webSocket: WebSocket, text: String) {
+                try {
+                    val message = json.decodeFromString<ServerMessage>(text)
+                    handleMessage(message)
+                    onMessage?.invoke(message)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error parsing message: ${e.message}")
+                }
+            }
+
+            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                Log.d(TAG, "WebSocket closed: $reason")
+                webSocket.cancel()
+                this@GameClient.webSocket = null
+                _connected.value = false
+                if (!manualDisconnect) scheduleReconnect()
+            }
+
+            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                Log.e(TAG, "WebSocket error: ${t.message}")
+                this@GameClient.webSocket = null
+                _connected.value = false
+                if (!manualDisconnect) scheduleReconnect()
+            }
+        })
+    }
+
+    private fun scheduleReconnect(delayMillis: Long = 2000) {
+        reconnectJob?.cancel()
+        reconnectJob = reconnectScope.launch {
+            delay(delayMillis)
+            if (!manualDisconnect) {
+                Log.d(TAG, "Reconnecting WebSocket...")
+                createWebSocket()
+            }
+        }
     }
 
     private fun send(message: ClientMessage) {
@@ -184,10 +220,10 @@ class GameClient {
                 _remoteMonsters.value = monsters
             }
             is ServerMessage.PlayerDamaged -> {
-                // Local player damage handled by local game world
+                // Local player damage is handled by el estado local del juego.
             }
             is ServerMessage.PlayerRespawned -> {
-                // Local player respawn handled by local game world
+                // Local player respawn is manejado por el juego local.
             }
             else -> {}
         }
