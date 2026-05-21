@@ -1,0 +1,29 @@
+[
+  {
+    "id": "iron_sword_eq",
+    "name": "Iron Sword",
+    "icon": "iron_sword",
+    "rarity": 1,
+    "category": "WEAPON_RIGHT",
+    "stats": { "attackPower": 10 },
+    "isEquipped": false
+  },
+  {
+    "id": "leather_armor_eq",
+    "name": "Leather Armor",
+    "icon": "leather_armor",
+    "rarity": 1,
+    "category": "CHEST",
+    "stats": { "defense": 8 },
+    "isEquipped": false
+  },
+  {
+    "id": "gold_ring_eq",
+    "name": "Gold Ring",
+    "icon": "gold_ring",
+    "rarity": 2,
+    "category": "RING_SLOT",
+    "stats": { "charisma": 3 },
+    "isEquipped": false
+  }
+]

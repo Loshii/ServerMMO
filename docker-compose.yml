@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  dnd-server:
+    build: ./server
+    ports:
+      - "8080:8080"
+    environment:
+      - KTOR_DEV=false
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'

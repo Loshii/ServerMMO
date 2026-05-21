@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.DnDRoleGate" parent="android:Theme.Holo">
+        <item name="android:windowBackground">#101010</item>
+        <item name="android:navigationBarColor">#101010</item>
+        <item name="android:statusBarColor">#101010</item>
+    </style>
+</resources>

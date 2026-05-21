@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "866342971981",
+    "project_id": "slyvee-2958c",
+    "storage_bucket": "slyvee-2958c"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:866342971981:android:01430427374e32df298a04",
+        "android_client_info": {
+          "package_name": "com.loshii.dndzerinx"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDPvESCPAgP92xokPvLmp-RKsVmelkOCm8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

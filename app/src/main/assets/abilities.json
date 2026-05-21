@@ -1,0 +1,9 @@
+[
+  {
+    "id": "slash",
+    "name": "Corte",
+    "description": "Un golpe rápido con arma.",
+    "icon": null,
+    "stats": { "damage": 8 }
+  }
+]

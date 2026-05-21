@@ -1,0 +1,62 @@
+[
+  {
+    "id": "iron_sword",
+    "name": "Iron Sword",
+    "description": "A sturdy iron sword.",
+    "icon": "iron_sword",
+    "rarity": 1,
+    "quantity": 1,
+    "category": "Weapon",
+    "stackable": false,
+    "sellPrice": 50,
+    "stats": { "attackPower": 10 }
+  },
+  {
+    "id": "healing_potion",
+    "name": "Healing Potion",
+    "description": "Restores health when consumed.",
+    "icon": "healing_potion",
+    "rarity": 1,
+    "quantity": 5,
+    "category": "Consumable",
+    "stackable": true,
+    "sellPrice": 15,
+    "stats": { "healAmount": 50 }
+  },
+  {
+    "id": "leather_armor",
+    "name": "Leather Armor",
+    "description": "Lightweight armor offering basic protection.",
+    "icon": "leather_armor",
+    "rarity": 1,
+    "quantity": 1,
+    "category": "Armor",
+    "stackable": false,
+    "sellPrice": 120,
+    "stats": { "defense": 8 }
+  },
+  {
+    "id": "gold_ring",
+    "name": "Gold Ring",
+    "description": "A simple gold ring. May hold sentimental value.",
+    "icon": "gold_ring",
+    "rarity": 2,
+    "quantity": 1,
+    "category": "Accessory",
+    "stackable": false,
+    "sellPrice": 200,
+    "stats": { "charisma": 3 }
+  },
+  {
+    "id": "ember_staff",
+    "name": "Ember Staff",
+    "description": "A staff imbued with a small ember, enhances fire magic.",
+    "icon": "ember_staff",
+    "rarity": 3,
+    "quantity": 1,
+    "category": "Weapon",
+    "stackable": false,
+    "sellPrice": 450,
+    "stats": { "magicPower": 18 }
+  }
+]

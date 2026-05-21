@@ -1,0 +1,8 @@
+[
+  {
+    "id": "goblin",
+    "name": "Goblin",
+    "icon": null,
+    "stats": { "health": 30, "attackPower": 6 }
+  }
+]

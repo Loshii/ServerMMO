@@ -1,0 +1,14 @@
+[
+  {
+    "id": "warrior",
+    "name": "Guerrero",
+    "icon": null,
+    "stats": { "strength": 4, "defense": 3 }
+  },
+  {
+    "id": "mage",
+    "name": "Mago",
+    "icon": null,
+    "stats": { "intelligence": 5, "magic": 4 }
+  }
+]

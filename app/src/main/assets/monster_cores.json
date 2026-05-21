@@ -1,0 +1,8 @@
+[
+  {
+    "id": "core_fire",
+    "name": "Núcleo de Fuego",
+    "icon": null,
+    "stats": { "magicPower": 5 }
+  }
+]

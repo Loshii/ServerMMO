@@ -1,0 +1,43 @@
+# Gradle
+.gradle/
+build/
+**/build/
+.gradle/
+.gradle-cache/
+.gradle-wrapper.jar
+
+# Local configuration
+local.properties
+
+# IntelliJ / Android Studio
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Kotlin
+*.kotlin_module
+
+# Generated files
+/captures/
+.externalNativeBuild/
+.cxx/
+
+# Misc
+*.keystore
+*.jks
+gradle-dist/
+gradle-8.5/
+gradle-8.5-bin.zip
+Icon.jpg
+.gradle/
+build/
+server/build/
+local.properties

@@ -1,0 +1,8 @@
+[
+  {
+    "id": "rune_power",
+    "name": "Runa de Poder",
+    "icon": null,
+    "stats": { "attackPower": 4 }
+  }
+]

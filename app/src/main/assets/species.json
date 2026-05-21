@@ -1,0 +1,22 @@
+[
+  {
+    "id": "human",
+    "name": "Humano",
+    "icon": null,
+    "stats": {
+      "strength": 2,
+      "intelligence": 1,
+      "charisma": 1
+    }
+  },
+  {
+    "id": "elf",
+    "name": "Elfo",
+    "icon": null,
+    "stats": {
+      "agility": 3,
+      "intelligence": 2,
+      "speed": 5
+    }
+  }
+]
