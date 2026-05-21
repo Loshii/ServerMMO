@@ -59,7 +59,11 @@ object GodotLauncher {
                     context.startActivity(actionIntent)
                     true
                 } catch (e: Exception) {
-                    Toast.makeText(context, "Error al lanzar Godot: ${e.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(
+                        context,
+                        "No se encontró Godot instalado. Exporta el juego Godot como APK con paquete '$GODOT_PACKAGE_NAME'.",
+                        Toast.LENGTH_LONG
+                    ).show()
                     false
                 }
             }
@@ -70,7 +74,11 @@ object GodotLauncher {
                     })
                     true
                 } catch (e: Exception) {
-                    Toast.makeText(context, "Error al lanzar Godot: ${e.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(
+                        context,
+                        "No se encontró Godot instalado. Exporta el juego Godot como APK con paquete '$GODOT_PACKAGE_NAME'.",
+                        Toast.LENGTH_LONG
+                    ).show()
                     false
                 }
             }
