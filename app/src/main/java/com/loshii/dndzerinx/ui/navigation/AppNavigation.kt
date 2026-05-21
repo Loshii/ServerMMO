@@ -39,7 +39,6 @@ import androidx.navigation.compose.rememberNavController
 import com.loshii.dndzerinx.ui.components.CollapsibleBottomNavBar
 import com.loshii.dndzerinx.ui.screens.auth.AuthScreen
 import com.loshii.dndzerinx.ui.screens.chat.ChatScreen
-import com.loshii.dndzerinx.ui.screens.home.HomeScreen
 import com.loshii.dndzerinx.ui.screens.library.ClassLibraryScreen
 import com.loshii.dndzerinx.ui.screens.profile.LocalProfileScreen
 import com.loshii.dndzerinx.ui.screens.profile.CharacterScreen
@@ -50,7 +49,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 
 sealed class Screen(val route: String) {
     data object Auth : Screen("auth")
-    data object Home : Screen("home")
     data object Profile : Screen("profile")
     data object Character : Screen("character")
     data object Chat : Screen("chat")
@@ -59,7 +57,7 @@ sealed class Screen(val route: String) {
     data object GameWorld : Screen("gameworld")
 }
 
-private val bottomNavRoutes = listOf("home", "library", "chat", "profile", "settings")
+private val bottomNavRoutes = listOf("library", "chat", "profile", "settings")
 
 @Composable
 fun AppNavigation() {
@@ -112,15 +110,6 @@ fun AppNavigation() {
                         navController.navigate(Screen.Auth.route) {
                             popUpTo(0) { inclusive = true }
                         }
-                    }
-                )
-            }
-
-            composable(Screen.Home.route) {
-                HomeScreen(
-                    viewModel = authViewModel,
-                    onNavigate = { route ->
-                        navController.navigate(route)
                     }
                 )
             }
@@ -309,7 +298,6 @@ fun AppNavigation() {
                 currentRoute = currentRoute,
                 onTabSelected = { tab ->
                     when (tab) {
-                        "home" -> navController.navigate(Screen.Home.route) { popUpTo(Screen.Home.route) { inclusive = true } }
                         "library" -> navController.navigate(Screen.Library.route) { popUpTo(Screen.Library.route) { inclusive = true } }
                         "chat" -> navController.navigate(Screen.Chat.route)
                         "profile" -> navController.navigate(Screen.Profile.route) { popUpTo(Screen.Profile.route) { inclusive = true } }

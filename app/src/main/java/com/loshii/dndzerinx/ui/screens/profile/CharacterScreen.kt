@@ -29,7 +29,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -104,7 +103,6 @@ fun CharacterScreen(
             TabButton("Habilidades", selectedTab == CharacterTab.HABILIDADES, Modifier.weight(1f)) { selectedTab = CharacterTab.HABILIDADES }
         }
 
-        val context = LocalContext.current
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -113,7 +111,7 @@ fun CharacterScreen(
         ) {
             when (selectedTab) {
                 CharacterTab.EQUIPO -> EquipmentTab(u, viewModel)
-                CharacterTab.INVENTARIO -> InventoryTab(u, viewModel, context)
+                CharacterTab.INVENTARIO -> InventoryTab(u, viewModel)
                 CharacterTab.HABILIDADES -> SkillsTab(u)
             }
         }
@@ -206,7 +204,7 @@ private fun EquipmentTab(u: com.loshii.dndzerinx.model.User, viewModel: AuthView
 }
 
 @Composable
-private fun InventoryTab(u: com.loshii.dndzerinx.model.User, viewModel: AuthViewModel, context: android.content.Context) {
+private fun InventoryTab(u: com.loshii.dndzerinx.model.User, viewModel: AuthViewModel) {
     var selectedItem by remember { mutableStateOf<InventoryItem?>(null) }
 
     Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
@@ -229,13 +227,6 @@ private fun InventoryTab(u: com.loshii.dndzerinx.model.User, viewModel: AuthView
                     selectedItem = item
                 }
                 Spacer(modifier = Modifier.height(14.dp))
-                Button(onClick = {
-                    val sampleItems = com.loshii.dndzerinx.util.ItemRepository.loadSampleInventory(context)
-                    viewModel.addItemsToInventory(sampleItems)
-                }) {
-                    Text("Agregar items de prueba")
-                }
-                Spacer(modifier = Modifier.height(12.dp))
                 InventoryActionList(u.inventory.items, viewModel) { item ->
                     selectedItem = item
                 }

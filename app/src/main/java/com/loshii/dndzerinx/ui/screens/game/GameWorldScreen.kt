@@ -37,14 +37,12 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.ImageLoader
-import coil.compose.AsyncImage
-import coil.size.Size
-import com.loshii.dndzerinx.util.CoilGifImage
 import coil.request.ImageRequest
 import coil.request.SuccessResult
 import com.loshii.dndzerinx.data.LocalProfile
 import com.loshii.dndzerinx.data.LocalProfileManager
 import com.loshii.dndzerinx.model.User
+import com.loshii.dndzerinx.util.CoilGifImage
 import com.loshii.dndzerinx.model.game.DamageNumber
 import com.loshii.dndzerinx.model.game.EntityState
 import com.loshii.dndzerinx.model.game.GameWorld
@@ -54,7 +52,6 @@ import com.loshii.dndzerinx.model.game.Vector2
 import com.loshii.dndzerinx.model.game.WorldBounds
 import com.loshii.dndzerinx.network.GameClient
 import com.loshii.dndzerinx.network.ServerMessage
-import com.loshii.dndzerinx.ui.components.VirtualJoystick
 import com.loshii.dndzerinx.viewmodel.AuthViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first

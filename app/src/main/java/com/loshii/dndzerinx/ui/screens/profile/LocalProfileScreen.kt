@@ -40,6 +40,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,17 +49,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.request.ImageRequest
-import coil.size.Size
-import com.google.firebase.auth.FirebaseAuth
 import com.loshii.dndzerinx.data.LocalProfileManager
 import com.loshii.dndzerinx.util.CoilGifImage
-import com.loshii.dndzerinx.util.ImageUploader
 import com.loshii.dndzerinx.viewmodel.AuthViewModel
 import com.loshii.dndzerinx.viewmodel.ImageType
 import kotlinx.coroutines.launch
-
-enum class ProfileTab { STATS, EQUIPO, INVENTARIO, HABILIDADES }
 
 @Composable
 fun LocalProfileScreen(
@@ -72,11 +67,10 @@ fun LocalProfileScreen(
     val profileManager = remember { LocalProfileManager(context) }
     val profile by profileManager.profile.collectAsState(initial = null)
     val user by viewModel.currentUser.collectAsState()
-    val scope = androidx.lifecycle.viewmodel.compose.viewModel<com.loshii.dndzerinx.viewmodel.LocalProfileViewModel>().scope
+    val scope = rememberCoroutineScope()
 
     var showEditNameDialog by remember { mutableStateOf(false) }
     var newName by remember { mutableStateOf("") }
-    var selectedTab by remember { mutableStateOf(ProfileTab.STATS) }
 
     val avatarPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
@@ -181,16 +175,7 @@ fun LocalProfileScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            TabRow(selectedTab = selectedTab, onTabSelected = { selectedTab = it })
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            when (selectedTab) {
-                ProfileTab.STATS -> StatsTab(profile)
-                ProfileTab.EQUIPO -> EquipoTab()
-                ProfileTab.INVENTARIO -> InventarioTab()
-                ProfileTab.HABILIDADES -> HabilidadesTab()
-            }
+            StatsTab(profile)
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -206,7 +191,7 @@ fun LocalProfileScreen(
 
             Button(
                 onClick = {
-                    FirebaseAuth.getInstance().signOut()
+                    viewModel.signOut()
                     onSignOut()
                 },
                 modifier = Modifier.fillMaxWidth().height(48.dp),
@@ -227,36 +212,36 @@ fun LocalProfileScreen(
                     modifier = Modifier.align(Alignment.Center).padding(24.dp).fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E))
                 ) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Text("Editar nombre", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = newName,
-                        onValueChange = { newName = it },
-                        label = { Text("Nombre", color = Color.White) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                        TextButton(onClick = { showEditNameDialog = false }) {
-                            Text("Cancelar", color = Color(0xFF888888))
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Button(
-                            onClick = {
-                                if (newName.isNotBlank()) {
-                                    scope.launch { profileManager.updateName(newName.trim()) }
-                                }
-                                showEditNameDialog = false
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Text("Editar nombre", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = newName,
+                            onValueChange = { newName = it },
+                            label = { Text("Nombre", color = Color.White) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                            TextButton(onClick = { showEditNameDialog = false }) {
+                                Text("Cancelar", color = Color(0xFF888888))
                             }
-                        ) {
-                            Text("Guardar")
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Button(
+                                onClick = {
+                                    if (newName.isNotBlank()) {
+                                        scope.launch { profileManager.updateName(newName.trim()) }
+                                    }
+                                    showEditNameDialog = false
+                                }
+                            ) {
+                                Text("Guardar")
+                            }
                         }
                     }
                 }
             }
-        }
         }
     }
 }
@@ -266,23 +251,6 @@ private fun StatBadge(label: String, value: String, color: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(value, color = color, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         Text(label, color = Color(0xFF888888), fontSize = 12.sp)
-    }
-}
-
-@Composable
-private fun TabRow(selectedTab: ProfileTab, onTabSelected: (ProfileTab) -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-        ProfileTab.entries.forEach { tab ->
-            Text(
-                text = tab.name,
-                color = if (tab == selectedTab) Color.White else Color(0xFF666666),
-                fontSize = 14.sp,
-                fontWeight = if (tab == selectedTab) FontWeight.Bold else FontWeight.Normal,
-                modifier = Modifier
-                    .clickable { onTabSelected(tab) }
-                    .padding(vertical = 8.dp, horizontal = 12.dp)
-            )
-        }
     }
 }
 
@@ -329,48 +297,5 @@ private fun StatRow(label: String, value: String) {
     ) {
         Text(label, color = Color(0xFF888888), fontSize = 14.sp)
         Text(value, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-    }
-}
-
-@Composable
-private fun EquipoTab() {
-    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("Equipo del personaje", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-        Spacer(modifier = Modifier.height(16.dp))
-        Text("Arma: Espada de hierro", color = Color(0xFF888888), fontSize = 14.sp)
-        Text("Armadura: Cota de malla", color = Color(0xFF888888), fontSize = 14.sp)
-        Text("Escudo: Escudo de madera", color = Color(0xFF888888), fontSize = 14.sp)
-        Text("Accesorio: Anillo de poder", color = Color(0xFF888888), fontSize = 14.sp)
-    }
-}
-
-@Composable
-private fun InventarioTab() {
-    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("Inventario vacío", color = Color(0xFF888888), fontSize = 16.sp)
-        Text("Derrota monstruos para obtener objetos", color = Color(0xFF666666), fontSize = 12.sp)
-    }
-}
-
-@Composable
-private fun HabilidadesTab() {
-    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("Habilidades", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-        Spacer(modifier = Modifier.height(16.dp))
-        SkillItem("Golpe fuerte", "Ataque básico mejorado")
-        SkillItem("Defensa férrea", "+5 defensa temporal")
-    }
-}
-
-@Composable
-private fun SkillItem(name: String, desc: String) {
-    Card(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E))
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(name, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-            Text(desc, color = Color(0xFF888888), fontSize = 12.sp)
-        }
     }
 }
