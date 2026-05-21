@@ -1,431 +1,297 @@
 package com.loshii.dndzerinx.ui.screens.game
 
-import android.graphics.Paint
+import android.content.Context
+import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.path
-import com.loshii.dndzerinx.ui.icons.GameIcons
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size as ComposeSize
-import androidx.compose.ui.graphics.*
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import coil.ImageLoader
-import coil.request.ImageRequest
-import coil.request.SuccessResult
 import com.loshii.dndzerinx.data.LocalProfile
 import com.loshii.dndzerinx.data.LocalProfileManager
+import com.loshii.dndzerinx.engine.GodotLauncher
 import com.loshii.dndzerinx.model.User
-import com.loshii.dndzerinx.util.CoilGifImage
+import com.loshii.dndzerinx.model.game.AttackSwing
 import com.loshii.dndzerinx.model.game.DamageNumber
-import com.loshii.dndzerinx.model.game.EntityState
-import com.loshii.dndzerinx.model.game.GameWorld
-import com.loshii.dndzerinx.model.game.Monster
+import com.loshii.dndzerinx.model.game.GameEngine
+import com.loshii.dndzerinx.model.game.GameEvent
 import com.loshii.dndzerinx.model.game.MonsterType
+import com.loshii.dndzerinx.model.game.Particle
+import com.loshii.dndzerinx.model.game.TileType
 import com.loshii.dndzerinx.model.game.Vector2
 import com.loshii.dndzerinx.model.game.WorldBounds
+import com.loshii.dndzerinx.model.game.GameWorld
 import com.loshii.dndzerinx.network.GameClient
 import com.loshii.dndzerinx.network.ServerConfig
-import com.loshii.dndzerinx.network.ServerMessage
-import com.loshii.dndzerinx.engine.GodotLauncher
-import com.loshii.dndzerinx.ui.screens.game.GameHud
+import com.loshii.dndzerinx.ui.components.VirtualJoystick
+import com.loshii.dndzerinx.util.CoilGifImage
 import com.loshii.dndzerinx.viewmodel.AuthViewModel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
-
-data class RemotePlayer(
-    val id: String,
-    val name: String,
-    val position: Vector2,
-    val hp: Int,
-    val maxHp: Int,
-    val level: Int,
-    val isDead: Boolean
-)
+import kotlin.math.sin
+import kotlin.random.Random
 
 @Composable
 fun GameWorldScreen(
-    viewModel: AuthViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
-    onNavigateToProfile: () -> Unit = {},
-    onNavigateToSettings: () -> Unit = {},
-    onSignOut: () -> Unit = {}
+    viewModel: AuthViewModel,
+    localProfileManager: LocalProfileManager,
+    onNavigateToProfile: () -> Unit,
+    onNavigateToSettings: () -> Unit,
+    onNavigateToChat: () -> Unit,
+    onNavigateToLibrary: () -> Unit,
+    onSignOut: () -> Unit,
+    onDeath: () -> Unit
 ) {
     val context = LocalContext.current
-    val localProfileManager = remember { LocalProfileManager(context) }
-    val localProfile by localProfileManager.profile.collectAsState(initial = null)
-    val scope = rememberCoroutineScope()
+    val user by viewModel.currentUser.collectAsState(initial = null)
+    val profile by localProfileManager.profile.collectAsState(initial = com.loshii.dndzerinx.data.LocalProfile())
+    val client = remember { GameClient() }
+    val localProfile = profile
+    val currentUser = user
 
-    val user by viewModel.currentUser.collectAsState()
+    var showProfileDialog by remember { mutableStateOf(false) }
+    var showDeathOverlay by remember { mutableStateOf(false) }
+    var levelUpMessage by remember { mutableStateOf<String?>(null) }
+    var showMenu by remember { mutableStateOf(false) }
+    var currentTime by remember { mutableStateOf(System.currentTimeMillis()) }
+    var joystickDirection by remember { mutableStateOf(Vector2(0f, 0f)) }
 
-    val worldBounds = remember { WorldBounds(800f, 1600f) }
-    val gameWorld = remember {
+    val worldBounds = remember { WorldBounds(1600f, 2400f) }
+    val gameEngine = remember {
         GameWorld(
             bounds = worldBounds,
-            playerLevel = localProfile?.level ?: 1,
-            playerMaxHp = localProfile?.maxHp ?: 100,
-            playerAtk = localProfile?.attackPower ?: 10,
-            playerDef = localProfile?.defense ?: 5
+            playerLevel = localProfile.level,
+            playerMaxHp = localProfile.maxHp,
+            playerAtk = localProfile.attackPower,
+            playerDef = localProfile.defense
         )
     }
 
-    val gameClient = remember { GameClient() }
-    val isConnected by gameClient.connected.collectAsState()
-    val remotePlayersState by gameClient.remotePlayers.collectAsState()
-    val remoteMonstersState by gameClient.remoteMonsters.collectAsState()
-
-    val remotePlayers = remember { mutableStateListOf<RemotePlayer>() }
-    val localDamageNumbers = remember { mutableStateListOf<DamageNumber>() }
-
-    var playerAvatar by remember { mutableStateOf<ImageBitmap?>(null) }
-    val avatarUrl = localProfile?.avatarUrl?.takeIf { it.isNotBlank() } ?: user?.avatarUrl
-
-    LaunchedEffect(avatarUrl) {
-        if (avatarUrl.isNullOrBlank()) return@LaunchedEffect
-        try {
-            val loader = ImageLoader.Builder(context).crossfade(true).build()
-            val request = ImageRequest.Builder(context).data(avatarUrl).size(128).build()
-            val result = loader.execute(request)
-            if (result is SuccessResult) {
-                val drawable = result.drawable
-                val bitmap = android.graphics.Bitmap.createBitmap(128, 128, android.graphics.Bitmap.Config.ARGB_8888)
-                val canvas = android.graphics.Canvas(bitmap)
-                drawable.setBounds(0, 0, canvas.width, canvas.height)
-                drawable.draw(canvas)
-                playerAvatar = bitmap.asImageBitmap()
-            }
-        } catch (e: Exception) {
-            playerAvatar = null
-        }
+    LaunchedEffect(Unit) {
+        client.onMessage = { _ -> }
+        client.connect(
+            serverUrl = ServerConfig.GAME_WEBSOCKET_URL,
+            playerId = currentUser?.id ?: "local_${Random.nextInt()}",
+            playerName = localProfile.displayName,
+            level = localProfile.level,
+            maxHp = localProfile.maxHp
+        )
     }
 
-    LaunchedEffect(localProfile) {
-        localProfile?.let { profile ->
-            gameWorld.playerLevel = profile.level
-            gameWorld.playerMaxHp = profile.maxHp
-            gameWorld.playerAtk = profile.attackPower
-            gameWorld.playerDef = profile.defense
-        }
-    }
-
-    LaunchedEffect(user?.id) {
-        val profile = localProfileManager.profile.first()
-        if (user != null && !isConnected) {
-            gameClient.connect(
-                serverUrl = ServerConfig.GAME_WEBSOCKET_URL,
-                playerId = user!!.id,
-                playerName = profile.displayName,
-                level = profile.level,
-                maxHp = profile.maxHp
-            )
-        }
+    DisposableEffect(Unit) {
+        onDispose { client.disconnect() }
     }
 
     LaunchedEffect(Unit) {
-        snapshotFlow { remotePlayersState.values.toList() }.collect { states ->
-            remotePlayers.clear()
-            states.forEach { state ->
-                remotePlayers.add(
-                    RemotePlayer(
-                        id = state.id, name = state.name,
-                        position = Vector2(state.x, state.y),
-                        hp = state.hp, maxHp = state.maxHp,
-                        level = state.level, isDead = state.isDead
-                    )
-                )
-            }
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        snapshotFlow { remoteMonstersState.values.toList() }.collect { states ->
-            states.forEach { state ->
-                val existing = gameWorld.monsters.find { it.id == state.id }
-                if (existing != null) {
-                    existing.position = Vector2(state.x, state.y)
-                    existing.hp = state.hp
-                }
-            }
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        gameClient.messages.collect { messages ->
-            val latest = messages.lastOrNull() ?: return@collect
-            when (latest) {
-                is ServerMessage.PlayerAttacked -> {
-                    val monster = gameWorld.monsters.find { it.id == latest.monsterId }
-                    monster?.let {
-                        localDamageNumbers.add(
-                            DamageNumber(
-                                value = latest.damage,
-                                position = Vector2(it.position.x, it.position.y - 20f),
-                                isCrit = latest.isCrit,
-                                color = if (latest.isCrit) 0xFFFF0000 else 0xFFFFFFFF,
-                                startTime = System.currentTimeMillis()
-                            )
-                        )
-                    }
-                }
-                is ServerMessage.PlayerDamaged -> {
-                    if (latest.playerId == user?.id) {
-                        gameWorld.playerHp = latest.currentHp
-                        if (latest.currentHp <= 0) {
-                            gameWorld.playerState = EntityState.DEAD
+        while (true) {
+            val events = gameEngine.events.toList()
+            gameEngine.clearEvents()
+            for (event in events) {
+                when (event) {
+                    is GameEvent.MonsterDamaged -> {}
+                    is GameEvent.MonsterKilled -> {
+                        val xpGain = event.xpReward
+                        gameEngine.playerGold += event.goldReward
+                        if (gameEngine.gainXp(xpGain)) {
+                            levelUpMessage = "¡Subiste a nivel ${gameEngine.playerLevel}!"
                         }
-                        scope.launch { localProfileManager.updateHp(latest.currentHp) }
-                        localDamageNumbers.add(
-                            DamageNumber(
-                                value = latest.damage,
-                                position = Vector2(gameWorld.playerPosition.x, gameWorld.playerPosition.y - 30f),
-                                isCrit = false, color = 0xFFFF4444,
-                                startTime = System.currentTimeMillis()
-                            )
-                        )
+                        localProfileManager.addXp(xpGain)
+                        localProfileManager.addGold(event.goldReward)
+                        localProfileManager.updateHp(gameEngine.playerHp)
+                    }
+                    is GameEvent.PlayerDamaged -> {
+                        if (gameEngine.playerHp <= 0) showDeathOverlay = true
+                        localProfileManager.updateHp(gameEngine.playerHp)
+                    }
+                    is GameEvent.LevelUp -> {
+                        localProfileManager.updateLevel(gameEngine.playerLevel)
+                        localProfileManager.updateMaxHp(gameEngine.playerMaxHp)
+                        localProfileManager.updateAttackPower(gameEngine.playerAtk)
+                        localProfileManager.updateDefense(gameEngine.playerDef)
+                        localProfileManager.updateHp(gameEngine.playerMaxHp)
+                    }
+                    is GameEvent.PlayerRespawned -> {
+                        localProfileManager.updateHp(gameEngine.playerMaxHp)
                     }
                 }
-                is ServerMessage.MonsterDied -> {
-                    val monster = gameWorld.monsters.find { it.id == latest.monsterId }
-                    monster?.let {
-                        it.hp = 0
-                        scope.launch {
-                            localProfileManager.addXp(latest.xpReward)
-                            localProfileManager.addGold(latest.goldReward)
-                        }
-                        localDamageNumbers.add(
-                            DamageNumber(
-                                value = latest.xpReward,
-                                position = Vector2(it.position.x, it.position.y - 20f),
-                                isCrit = false, color = 0xFFFFFF00,
-                                startTime = System.currentTimeMillis()
-                            )
-                        )
-                    }
-                }
-                is ServerMessage.PlayerRespawned -> {
-                    if (latest.playerId == user?.id) {
-                        gameWorld.playerPosition = Vector2(latest.x, latest.y)
-                        gameWorld.playerHp = latest.hp
-                        gameWorld.playerState = EntityState.IDLE
-                        scope.launch { localProfileManager.updateHp(latest.hp) }
-                    }
-                }
-                else -> {}
             }
+            delay(50)
         }
     }
 
-    var cameraOffset by remember { mutableStateOf(Vector2(0f, 0f)) }
-    var currentTime by remember { mutableStateOf(0L) }
-    var isRunning by remember { mutableStateOf(true) }
-    var lastMoveSend by remember { mutableStateOf(0L) }
-    var canvasSize by remember { mutableStateOf(androidx.compose.ui.geometry.Size.Zero) }
-    var showProfileDialog by remember { mutableStateOf(false) }
-    var moveDirection by remember { mutableStateOf(Vector2(0f, 0f)) }
-
     LaunchedEffect(Unit) {
-        while (isRunning) {
+        val targetFps = 60L
+        val frameDuration = 1000L / targetFps
+        var lastTime = System.nanoTime()
+        while (true) {
+            val now = System.nanoTime()
+            val deltaTime = ((now - lastTime) / 1_000_000_000f).coerceAtMost(0.05f)
+            lastTime = now
             currentTime = System.currentTimeMillis()
-            if (moveDirection != Vector2(0f, 0f)) {
-                gameWorld.movePlayer(moveDirection, 0.016f)
-            }
-            gameWorld.update(0.016f, currentTime)
+            gameEngine.update(deltaTime, currentTime)
+            delay(frameDuration)
+        }
+    }
 
-            val now = System.currentTimeMillis()
-            if (now - lastMoveSend > 50 && isConnected) {
-                gameClient.sendMove(gameWorld.playerPosition.x, gameWorld.playerPosition.y)
-                lastMoveSend = now
-            }
-
-            if (canvasSize != androidx.compose.ui.geometry.Size.Zero) {
-                cameraOffset = Vector2(
-                    gameWorld.playerPosition.x - canvasSize.width / 2,
-                    gameWorld.playerPosition.y - canvasSize.height / 2
-                )
+    LaunchedEffect(joystickDirection) {
+        while (true) {
+            if (joystickDirection.length() > 0.1f) {
+                gameEngine.movePlayer(joystickDirection, 0.016f)
+                client.sendMove(gameEngine.playerPosition.x, gameEngine.playerPosition.y)
             }
             delay(16)
         }
     }
 
-    DisposableEffect(Unit) {
-        onDispose {
-            isRunning = false
-            gameClient.disconnect()
-        }
-    }
-
-    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF2D5016))) {
+    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A0A))) {
         Canvas(
-            modifier = Modifier
-                .fillMaxSize()
-                .onSizeChanged { intSize ->
-                    canvasSize = ComposeSize(intSize.width.toFloat(), intSize.height.toFloat())
-                }
-                .pointerInput(Unit) {
-                    detectTapGestures { offset ->
-                        val worldX = offset.x + cameraOffset.x
-                        val worldY = offset.y + cameraOffset.y
-                        val playerScreenX = gameWorld.playerPosition.x - cameraOffset.x
-                        val playerScreenY = gameWorld.playerPosition.y - cameraOffset.y
-                        val distToPlayer = kotlin.math.sqrt(
-                            (worldX - playerScreenX) * (worldX - playerScreenX) +
-                            (worldY - playerScreenY) * (worldY - playerScreenY)
-                        )
-                        if (distToPlayer < 30f) {
-                            showProfileDialog = true
-                            return@detectTapGestures
+            modifier = Modifier.fillMaxSize().pointerInput(Unit) {
+                detectTapGestures { offset ->
+                    if (gameEngine.playerHp <= 0) return@detectTapGestures
+                    val worldX = offset.x + gameEngine.cameraX - size.width / 2
+                    val worldY = offset.y + gameEngine.cameraY - size.height / 2
+                    val tapped = gameEngine.monsters
+                        .filter { !it.isDead() }
+                        .firstOrNull { m ->
+                            val dx = worldX - m.position.x
+                            val dy = worldY - m.position.y
+                            kotlin.math.sqrt(dx * dx + dy * dy) < 60f
                         }
-                        val nearest = gameWorld.monsters
-                            .filter { !it.isDead() }
-                            .minByOrNull { monster ->
-                                val dx = monster.position.x - worldX
-                                val dy = monster.position.y - worldY
-                                dx * dx + dy * dy
-                            }
-                        nearest?.let { monster ->
-                            if (isConnected) {
-                                gameClient.sendAttack(monster.id)
-                            } else {
-                                gameWorld.attackNearestMonster(System.currentTimeMillis())
-                            }
-                        }
+                    if (tapped != null) {
+                        gameEngine.attackNearestMonster(currentTime)
                     }
                 }
+            }
         ) {
-            val canvasWidth = size.width
-            val canvasHeight = size.height
+            val shakeOffset = gameEngine.getShakeOffset()
+            val camX = gameEngine.cameraX
+            val camY = gameEngine.cameraY
+            val screenW = size.width
+            val screenH = size.height
 
-            drawRect(Color(0xFF3A6B18), size = size)
-
-            for (x in 0 until canvasWidth.toInt() step 80) {
-                for (y in 0 until canvasHeight.toInt() step 80) {
-                    val worldX = x + cameraOffset.x
-                    val worldY = y + cameraOffset.y
-                    val hash = (worldX.toInt() * 31 + worldY.toInt() * 17) % 100
-                    if (hash < 15) {
-                        drawCircle(
-                            Color(0xFF2D5016), radius = 8f,
-                            center = Offset(x.toFloat() + 40f, y.toFloat() + 40f)
-                        )
-                    }
+            clipRect {
+                withTransform({
+                    translate(
+                        left = -camX + screenW / 2 + shakeOffset.first,
+                        top = -camY + screenH / 2 + shakeOffset.second
+                    )
+                }) {
+                    drawTileMap(gameEngine)
+                    drawMonsters(gameEngine, currentTime)
+                    drawMonsterHealthBars(gameEngine)
+                    drawPlayer(gameEngine, currentUser, currentTime)
+                    drawDamageNumbers(gameEngine, currentTime)
+                    drawParticles(gameEngine)
+                    drawAttackSwings(gameEngine)
                 }
             }
 
-            gameWorld.monsters.forEach { monster ->
-                if (monster.isDead()) return@forEach
-                drawMonster(monster, cameraOffset, canvasWidth, canvasHeight)
-            }
-
-            remotePlayers.forEach { player ->
-                if (player.isDead) return@forEach
-                drawRemotePlayer(player, cameraOffset, canvasWidth, canvasHeight)
-            }
-
-            drawPlayer(gameWorld, cameraOffset, playerAvatar)
-
-            localDamageNumbers.forEach { dn ->
-                drawDamageNumber(dn, cameraOffset, currentTime)
-            }
-            gameWorld.damageNumbers.forEach { dn ->
-                drawDamageNumber(dn, cameraOffset, currentTime)
-            }
+            drawMinimap(gameEngine, size.width, size.height)
         }
 
         GameHud(
-            playerName = localProfile?.displayName ?: user?.displayName ?: "Aventurero",
-            playerLevel = gameWorld.playerLevel,
-            playerHp = gameWorld.playerHp,
-            playerMaxHp = gameWorld.playerMaxHp,
-            isConnected = isConnected,
-            onOpenProfile = { showProfileDialog = true },
-            onOpenSettings = onNavigateToSettings,
+            engine = gameEngine,
+            profile = localProfile,
+            user = currentUser,
+            levelUpMessage = levelUpMessage,
+            showMenu = showMenu,
+            onToggleMenu = { showMenu = !showMenu },
+            onProfile = { showProfileDialog = true },
+            onSettings = onNavigateToSettings,
+            onChat = onNavigateToChat,
+            onLibrary = onNavigateToLibrary,
             onSignOut = onSignOut,
             onLaunchGodot = {
-                val currentPlayerId = user?.id ?: return@GameHud
-                val currentPlayerName = localProfile?.displayName ?: user?.displayName ?: "Aventurero"
-                GodotLauncher.launchGodot(
-                    context = context,
-                    playerId = currentPlayerId,
-                    playerName = currentPlayerName,
-                    level = gameWorld.playerLevel,
-                    maxHp = gameWorld.playerMaxHp,
-                    accessKey = user?.accessKey ?: "",
-                    serverUrl = ServerConfig.GAME_WEBSOCKET_URL
-                )
+                if (currentUser != null) {
+                    GodotLauncher.launchGodot(
+                        context = context,
+                        playerId = currentUser.id,
+                        playerName = localProfile.displayName,
+                        level = localProfile.level,
+                        maxHp = localProfile.maxHp,
+                        accessKey = currentUser.accessKey.ifBlank { "local" },
+                        serverUrl = ServerConfig.GAME_WEBSOCKET_URL
+                    )
+                }
             },
             onAttack = {
-                val target = gameWorld.monsters.filter { !it.isDead() }
-                    .minByOrNull { it.position.distanceTo(gameWorld.playerPosition) }
-                if (target != null) {
-                    if (isConnected) {
-                        gameClient.sendAttack(target.id)
-                    } else {
-                        gameWorld.attackNearestMonster(currentTime)
-                    }
-                }
-            },
-            onMoveDirection = { direction -> moveDirection = direction },
-            onStopMoving = { moveDirection = Vector2(0f, 0f) }
-        )
-
-        if (gameWorld.playerState == EntityState.DEAD) {
-            Surface(
-                modifier = Modifier.fillMaxSize(),
-                color = Color.Black.copy(alpha = 0.7f)
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text("Has muerto", color = Color.Red, fontSize = 32.sp, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(
-                        onClick = {
-                            if (isConnected) gameClient.sendRespawn()
-                            else gameWorld.respawnPlayer()
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
-                    ) {
-                        Text("Reaparecer", fontSize = 18.sp)
-                    }
+                val attacked = gameEngine.attackNearestMonster(currentTime)
+                if (!attacked) {
+                    Toast.makeText(context, "No hay enemigos cerca", Toast.LENGTH_SHORT).show()
                 }
             }
+        )
+
+        VirtualJoystick(
+            size = 150.dp,
+            onDirectionChanged = { dir -> joystickDirection = dir }
+        )
+
+        if (showDeathOverlay) {
+            DeathOverlay(
+                onRespawn = {
+                    gameEngine.respawnPlayer()
+                    client.sendRespawn()
+                    showDeathOverlay = false
+                }
+            )
         }
 
-            if (showProfileDialog) {
+        if (showProfileDialog && currentUser != null) {
             ProfileDialog(
                 profile = localProfile,
-                user = user,
+                user = currentUser,
                 onDismiss = { showProfileDialog = false },
                 onEditProfile = {
                     showProfileDialog = false
@@ -433,117 +299,320 @@ fun GameWorldScreen(
                 }
             )
         }
+
+        if (levelUpMessage != null) {
+            Box(
+                modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter).padding(top = 100.dp)
+            ) {
+                AnimatedVisibility(
+                    visible = levelUpMessage != null,
+                    enter = scaleIn() + fadeIn(),
+                    exit = scaleOut() + fadeOut()
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = Color(0xFFFFD700).copy(alpha = 0.9f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFF1A1A1A))
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = levelUpMessage ?: "",
+                                color = Color(0xFF1A1A1A),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp
+                            )
+                        }
+                    }
+                }
+                LaunchedEffect(levelUpMessage) {
+                    if (levelUpMessage != null) {
+                        delay(3000)
+                        levelUpMessage = null
+                    }
+                }
+            }
+        }
+
+        Box(
+            modifier = Modifier.fillMaxSize().padding(16.dp),
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("HP", color = Color(0xFF888888), fontSize = 10.sp)
+                    Text("${gameEngine.playerHp}/${gameEngine.playerMaxHp}", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("LV", color = Color(0xFF888888), fontSize = 10.sp)
+                    Text("${gameEngine.playerLevel}", color = Color(0xFFFFD700), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("ORO", color = Color(0xFF888888), fontSize = 10.sp)
+                    Text("${gameEngine.playerGold}", color = Color(0xFFFFD700), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("ATK", color = Color(0xFF888888), fontSize = 10.sp)
+                    Text("${gameEngine.playerAtk}", color = Color(0xFFFF6666), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("DEF", color = Color(0xFF888888), fontSize = 10.sp)
+                    Text("${gameEngine.playerDef}", color = Color(0xFF66BBFF), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
     }
+}
+
+private fun DrawScope.drawTileMap(engine: GameEngine) {
+    val map = engine.tileMap
+    val tileSize = map.tileSize
+
+    val startX = 0.coerceAtLeast(0)
+    val startY = 0.coerceAtLeast(0)
+    val endX = map.width
+    val endY = map.height
+
+    for (ty in startY until endY) {
+        for (tx in startX until endX) {
+            val tileType = TileType.values()[map.tiles[ty][tx]]
+            val x = tx * tileSize
+            val y = ty * tileSize
+            val color = when (tileType) {
+                TileType.GRASS -> Color(0xFF2D5016)
+                TileType.DIRT -> Color(0xFF6B4423)
+                TileType.STONE -> Color(0xFF4A4A4A)
+                TileType.WATER -> Color(0xFF1A4A6B)
+                TileType.SAND -> Color(0xFFC4A85A)
+                TileType.DARK_STONE -> Color(0xFF2A2A2A)
+            }
+            drawRect(
+                color = color,
+                topLeft = Offset(x.toFloat(), y.toFloat()),
+                size = Size(tileSize.toFloat(), tileSize.toFloat())
+            )
+            if (tileType == TileType.GRASS) {
+                val shade = if ((tx + ty) % 2 == 0) Color(0xFF2A4A14) else Color(0xFF305518)
+                drawRect(
+                    color = shade,
+                    topLeft = Offset(x.toFloat(), y.toFloat()),
+                    size = Size(tileSize.toFloat(), tileSize.toFloat())
+                )
+            }
+            if (tileType == TileType.STONE && (tx + ty) % 3 == 0) {
+                drawRect(
+                    color = Color(0xFF3E3E3E),
+                    topLeft = Offset(x + 4f, y + 4f),
+                    size = Size(tileSize - 8f, tileSize - 8f)
+                )
+            }
+        }
+    }
+}
+
+private fun DrawScope.drawMonsters(engine: GameEngine, currentTime: Long) {
+    for (monster in engine.monsters) {
+        if (monster.isDead()) continue
+        val pos = monster.position
+        val mc = Color(monster.type.color)
+        val bodyRadius = 18f
+        val pulse = sin(currentTime * 0.003 + pos.x) * 1.5f
+        val pF = pulse.toFloat()
+
+        drawCircle(color = mc.copy(alpha = 0.3f), radius = bodyRadius + 8f + pF, center = Offset(pos.x, pos.y + 4f))
+        drawCircle(color = mc, radius = bodyRadius + pF, center = Offset(pos.x, pos.y))
+        drawCircle(color = mc.copy(alpha = 0.7f), radius = bodyRadius * 0.6f, center = Offset(pos.x - 3f, pos.y - 2f))
+
+        drawCircle(color = Color.White, radius = 4f, center = Offset(pos.x - 6f, pos.y - 5f))
+        drawCircle(color = Color.White, radius = 4f, center = Offset(pos.x + 6f, pos.y - 5f))
+        drawCircle(color = Color.Black, radius = 2f, center = Offset(pos.x - 6f + 1.5f, pos.y - 5f + 1.5f))
+        drawCircle(color = Color.Black, radius = 2f, center = Offset(pos.x + 6f + 1.5f, pos.y - 5f + 1.5f))
+
+        if (monster.state.name == "CHASE" || monster.state.name == "ATTACK") {
+            drawCircle(color = mc.copy(alpha = 0.15f), radius = bodyRadius + 12f + pF, center = Offset(pos.x, pos.y))
+        }
+
+        val namePaint = android.graphics.Paint().apply {
+            this.color = android.graphics.Color.WHITE
+            textSize = 24f
+            textAlign = android.graphics.Paint.Align.CENTER
+            isAntiAlias = true
+        }
+        drawContext.canvas.nativeCanvas.drawText(
+            monster.type.displayName,
+            pos.x,
+            pos.y - bodyRadius - 12f,
+            namePaint
+        )
+    }
+}
+
+private fun DrawScope.drawMonsterHealthBars(engine: GameEngine) {
+    for (monster in engine.monsters) {
+        if (monster.isDead() || monster.hp >= monster.maxHp) continue
+        val barWidth = 36f
+        val barHeight = 4f
+        val x = monster.position.x - barWidth / 2
+        val y = monster.position.y - 30f
+        drawRoundRect(Color(0xFF333333), Offset(x, y), Size(barWidth, barHeight), CornerRadius(2f))
+        val hpFraction = (monster.hp.toFloat() / monster.maxHp).coerceIn(0f, 1f)
+        drawRoundRect(
+            Color(0xFF44CC44),
+            Offset(x, y),
+            Size(barWidth * hpFraction, barHeight),
+            CornerRadius(2f)
+        )
+    }
+}
+
+private fun DrawScope.drawPlayer(engine: GameEngine, user: User?, currentTime: Long) {
+    val pos = engine.playerPosition
+    val isHit = engine.playerHitFlash
+    val hpFraction = (engine.playerHp.toFloat() / engine.playerMaxHp).coerceIn(0f, 1f)
+    val pulse = (sin(currentTime * 0.004) * 2f).toFloat()
+
+    if (isHit) {
+        drawCircle(color = Color.Red.copy(alpha = 0.5f), radius = 32f + pulse, center = Offset(pos.x, pos.y))
+        return
+    }
+
+    drawCircle(color = Color(0xFF222222).copy(alpha = 0.3f), radius = 24f + pulse, center = Offset(pos.x, pos.y + 4f))
+    drawCircle(color = Color(0xFF4FC3F7), radius = 24f + pulse, center = Offset(pos.x, pos.y))
+    drawCircle(color = Color(0xFF29B6F6).copy(alpha = 0.5f), radius = 18f, center = Offset(pos.x, pos.y))
+    drawCircle(color = Color.White.copy(alpha = 0.3f), radius = 12f, center = Offset(pos.x - 5f, pos.y - 5f))
+
+    drawCircle(color = Color.White, radius = 5f, center = Offset(pos.x - 7f, pos.y - 6f))
+    drawCircle(color = Color.White, radius = 5f, center = Offset(pos.x + 7f, pos.y - 6f))
+    drawCircle(color = Color.Black, radius = 2.5f, center = Offset(pos.x - 7f + 1.5f, pos.y - 6f + 1.5f))
+    drawCircle(color = Color.Black, radius = 2.5f, center = Offset(pos.x + 7f + 1.5f, pos.y - 6f + 1.5f))
+
+    val hpBarWidth = 40f
+    val hpBarHeight = 4f
+    drawRoundRect(color = Color(0xFF333333), topLeft = Offset(pos.x - hpBarWidth / 2, pos.y - 38f), size = Size(hpBarWidth, hpBarHeight), cornerRadius = CornerRadius(2f))
+    val hpColor = when {
+        hpFraction > 0.5f -> Color(0xFF44CC44)
+        hpFraction > 0.25f -> Color(0xFFCCCC00)
+        else -> Color(0xFFCC4444)
+    }
+    drawRoundRect(color = hpColor, topLeft = Offset(pos.x - hpBarWidth / 2, pos.y - 38f), size = Size(hpBarWidth * hpFraction, hpBarHeight), cornerRadius = CornerRadius(2f))
+}
+
+private fun DrawScope.drawDamageNumbers(engine: GameEngine, currentTime: Long) {
+    for (dn in engine.damageNumbers) {
+        val elapsed = (currentTime - dn.startTime) / 1000f
+        val alpha = (1f - elapsed / 1.5f).coerceIn(0f, 1f)
+        val yOff = -elapsed * 40f
+        val paint = android.graphics.Paint().apply {
+            val a = (alpha * 255).toInt()
+            this.color = android.graphics.Color.argb(
+                a,
+                ((dn.color shr 16) and 0xFF).toInt(),
+                ((dn.color shr 8) and 0xFF).toInt(),
+                (dn.color and 0xFF).toInt()
+            )
+            textSize = if (dn.isCrit) 28f else 22f
+            textAlign = android.graphics.Paint.Align.CENTER
+            isFakeBoldText = dn.isCrit
+            isAntiAlias = true
+        }
+        drawContext.canvas.nativeCanvas.drawText(
+            if (dn.isCrit) "¡${dn.value}!" else "${dn.value}",
+            dn.position.x,
+            dn.position.y + yOff,
+            paint
+        )
+    }
+}
+
+private fun DrawScope.drawParticles(engine: GameEngine) {
+    for (p in engine.particles) {
+        val color = Color(
+            red = ((p.color shr 16) and 0xFF).toInt(),
+            green = ((p.color shr 8) and 0xFF).toInt(),
+            blue = (p.color and 0xFF).toInt(),
+            alpha = (p.alpha * 255).toInt()
+        )
+        drawCircle(color, p.size, Offset(p.x, p.y))
+    }
+}
+
+private fun DrawScope.drawAttackSwings(engine: GameEngine) {
+    for (swing in engine.attackSwings) {
+        val progress = swing.progress
+        val alpha = (1f - progress).coerceIn(0f, 1f)
+        val sweepAngle = 120f * progress
+        val startAngle = swing.angle * 180f / Math.PI.toFloat() - sweepAngle / 2f
+        val color = Color(
+            red = ((swing.color shr 16) and 0xFF).toInt(),
+            green = ((swing.color shr 8) and 0xFF).toInt(),
+            blue = (swing.color and 0xFF).toInt(),
+            alpha = (alpha * 255).toInt()
+        )
+        drawArc(
+            color = color,
+            startAngle = startAngle,
+            sweepAngle = sweepAngle,
+            useCenter = false,
+            topLeft = Offset(swing.x - swing.radius, swing.y - swing.radius),
+            size = Size(swing.radius * 2, swing.radius * 2),
+            style = Stroke(width = 4f * (1f - progress * 0.5f))
+        )
+    }
+}
+
+private fun DrawScope.drawMinimap(engine: GameEngine, screenW: Float, screenH: Float) {
+    val mmSize = 100f
+    val mmX = screenW - mmSize - 10f
+    val mmY = 10f
+    val scale = mmSize / engine.bounds.width.coerceAtLeast(engine.bounds.height)
+
+    drawRoundRect(Color(0xCC000000), Offset(mmX, mmY), Size(mmSize, mmSize), CornerRadius(6f))
+
+    for (monster in engine.monsters) {
+        if (monster.isDead()) continue
+        val mx = mmX + monster.position.x * scale
+        val my = mmY + monster.position.y * scale
+        drawCircle(Color(monster.type.color).copy(alpha = 0.7f), 2f, Offset(mx, my))
+    }
+
+    val px = mmX + engine.playerPosition.x * scale
+    val py = mmY + engine.playerPosition.y * scale
+    drawCircle(Color(0xFF4FC3F7), 3f, Offset(px, py))
 }
 
 @Composable
-private fun StatRow(label: String, value: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
+private fun DeathOverlay(onRespawn: () -> Unit) {
+    Box(
+        modifier = Modifier.fillMaxSize().background(Color(0xCC000000)).clickable { },
+        contentAlignment = Alignment.Center
     ) {
-        Text(label, color = Color(0xFF999999), fontSize = 16.sp)
-        Text(value, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-    }
-}
-
-private fun DrawScope.drawRemotePlayer(
-    player: RemotePlayer,
-    cameraOffset: Vector2,
-    canvasWidth: Float,
-    canvasHeight: Float
-) {
-    val screenX = player.position.x - cameraOffset.x
-    val screenY = player.position.y - cameraOffset.y
-    if (screenX < -50 || screenX > canvasWidth + 50 || screenY < -50 || screenY > canvasHeight + 50) return
-
-    drawCircle(color = Color(0xFF9C27B0).copy(alpha = 0.3f), radius = 35f, center = Offset(screenX, screenY))
-    drawCircle(color = Color(0xFF9C27B0), radius = 25f, center = Offset(screenX, screenY))
-
-    val hpPercent = player.hp.toFloat() / player.maxHp
-    val barWidth = 60f
-    val barHeight = 6f
-    val barY = screenY - 40f
-    drawRect(color = Color(0xFF333333), topLeft = Offset(screenX - barWidth / 2, barY), size = ComposeSize(barWidth, barHeight))
-    drawRect(
-        color = if (hpPercent > 0.5f) Color(0xFF4CAF50) else if (hpPercent > 0.25f) Color(0xFFFF9800) else Color(0xFFF44336),
-        topLeft = Offset(screenX - barWidth / 2, barY),
-        size = ComposeSize(barWidth * hpPercent, barHeight)
-    )
-    drawContext.canvas.nativeCanvas.drawText(
-        player.name, screenX - 20f, barY - 4f,
-        Paint().apply { color = android.graphics.Color.WHITE; textSize = 11f; isAntiAlias = true }
-    )
-}
-
-private fun DrawScope.drawMonster(
-    monster: Monster,
-    cameraOffset: Vector2,
-    canvasWidth: Float,
-    canvasHeight: Float
-) {
-    val screenX = monster.position.x - cameraOffset.x
-    val screenY = monster.position.y - cameraOffset.y
-    if (screenX < -50 || screenX > canvasWidth + 50 || screenY < -50 || screenY > canvasHeight + 50) return
-
-    val monsterColor = Color(monster.type.color)
-    val radius = 20f + monster.level * 2f
-
-    drawCircle(color = monsterColor.copy(alpha = 0.3f), radius = radius + 8f, center = Offset(screenX, screenY))
-    drawCircle(color = monsterColor, radius = radius, center = Offset(screenX, screenY))
-    drawCircle(color = Color.White.copy(alpha = 0.3f), radius = radius * 0.4f, center = Offset(screenX - radius * 0.2f, screenY - radius * 0.2f))
-
-    val hpPercent = monster.hp.toFloat() / monster.maxHp
-    val barWidth = radius * 2.5f
-    val barHeight = 5f
-    val barY = screenY - radius - 12f
-    drawRect(color = Color(0xFF333333), topLeft = Offset(screenX - barWidth / 2, barY), size = ComposeSize(barWidth, barHeight))
-    drawRect(
-        color = if (hpPercent > 0.5f) Color(0xFF4CAF50) else if (hpPercent > 0.25f) Color(0xFFFF9800) else Color(0xFFF44336),
-        topLeft = Offset(screenX - barWidth / 2, barY),
-        size = ComposeSize(barWidth * hpPercent, barHeight)
-    )
-    drawContext.canvas.nativeCanvas.drawText(
-        "${monster.type.displayName} Lv.${monster.level}", screenX - 40f, barY - 4f,
-        Paint().apply { color = android.graphics.Color.WHITE; textSize = 10f; isAntiAlias = true }
-    )
-}
-
-private fun DrawScope.drawPlayer(
-    gameWorld: GameWorld,
-    cameraOffset: Vector2,
-    avatar: ImageBitmap?
-) {
-    val screenX = gameWorld.playerPosition.x - cameraOffset.x
-    val screenY = gameWorld.playerPosition.y - cameraOffset.y
-
-    drawCircle(color = Color(0xFF2196F3).copy(alpha = 0.3f), radius = 35f, center = Offset(screenX, screenY))
-
-    if (avatar != null) {
-        val circlePath = Path().apply { addOval(Rect(screenX - 25f, screenY - 25f, screenX + 25f, screenY + 25f)) }
-        clipPath(circlePath) {
-            drawImage(image = avatar, dstSize = IntSize(50, 50), dstOffset = IntOffset((screenX - 25f).toInt(), (screenY - 25f).toInt()))
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = "CAÍSTE EN BATALLA",
+                color = Color(0xFFFF4444),
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text = "Tu viaje termina aquí... por ahora",
+                color = Color(0xFF888888),
+                fontSize = 16.sp
+            )
+            Spacer(Modifier.height(24.dp))
+            Button(
+                onClick = onRespawn,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4FC3F7)),
+                modifier = Modifier.fillMaxWidth(0.6f)
+            ) {
+                Text("Reaparecer", color = Color.Black, fontWeight = FontWeight.Bold)
+            }
         }
-        drawCircle(color = Color(0xFF2196F3), radius = 25f, center = Offset(screenX, screenY), style = Stroke(width = 3f))
-    } else {
-        drawCircle(color = Color(0xFF2196F3), radius = 25f, center = Offset(screenX, screenY))
-        drawCircle(color = Color.White.copy(alpha = 0.4f), radius = 10f, center = Offset(screenX - 5f, screenY - 5f))
     }
-}
-
-private fun DrawScope.drawDamageNumber(dn: DamageNumber, cameraOffset: Vector2, currentTime: Long) {
-    val elapsed = (currentTime - dn.startTime) / 1000f
-    if (elapsed > 1f) return
-    val screenX = dn.position.x - cameraOffset.x
-    val screenY = dn.position.y - cameraOffset.y - elapsed * 40f
-    val paint = Paint().apply {
-        color = (dn.color and 0xFFFFFF).toInt()
-        textSize = if (dn.isCrit) 22f else 16f
-        isAntiAlias = true
-        isFakeBoldText = dn.isCrit
-    }
-    val text = if (dn.isCrit) "💥${dn.value}" else "${dn.value}"
-    drawContext.canvas.nativeCanvas.drawText(text, screenX - 15f, screenY, paint)
 }

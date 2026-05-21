@@ -43,7 +43,9 @@ import com.loshii.dndzerinx.ui.screens.profile.LocalProfileScreen
 import com.loshii.dndzerinx.ui.screens.profile.CharacterScreen
 import com.loshii.dndzerinx.ui.screens.settings.SettingsScreen
 import com.loshii.dndzerinx.ui.screens.game.GameWorldScreen
+import com.loshii.dndzerinx.data.LocalProfileManager
 import com.loshii.dndzerinx.viewmodel.AuthViewModel
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 sealed class Screen(val route: String) {
@@ -63,6 +65,8 @@ fun AppNavigation() {
     val currentRoute = navBackStackEntry?.destination?.route ?: ""
     val auth = FirebaseAuth.getInstance()
     val authViewModel: AuthViewModel = viewModel()
+    val context = LocalContext.current
+    val localProfileManager = remember { LocalProfileManager(context) }
     val startDestination = if (auth.currentUser != null) Screen.GameWorld.route else Screen.Auth.route
 
     val user by authViewModel.currentUser.collectAsState()
@@ -93,18 +97,26 @@ fun AppNavigation() {
             composable(Screen.GameWorld.route) {
                 GameWorldScreen(
                     viewModel = authViewModel,
+                    localProfileManager = localProfileManager,
                     onNavigateToProfile = {
                         navController.navigate(Screen.Profile.route)
                     },
                     onNavigateToSettings = {
                         navController.navigate(Screen.Settings.route)
                     },
+                    onNavigateToChat = {
+                        navController.navigate(Screen.Chat.route)
+                    },
+                    onNavigateToLibrary = {
+                        navController.navigate(Screen.Library.route)
+                    },
                     onSignOut = {
                         auth.signOut()
                         navController.navigate(Screen.Auth.route) {
                             popUpTo(0) { inclusive = true }
                         }
-                    }
+                    },
+                    onDeath = {}
                 )
             }
 
