@@ -4,10 +4,10 @@ import kotlin.random.Random
 
 class GameWorld(
     val bounds: WorldBounds,
-    val playerLevel: Int = 1,
-    val playerMaxHp: Int = 100,
-    val playerAtk: Int = 10,
-    val playerDef: Int = 5
+    var playerLevel: Int = 1,
+    var playerMaxHp: Int = 100,
+    var playerAtk: Int = 10,
+    var playerDef: Int = 5
 ) {
     var playerPosition = Vector2(bounds.width / 2, bounds.height / 2)
     var playerHp = playerMaxHp
@@ -31,10 +31,15 @@ class GameWorld(
     }
 
     private fun spawnInitialMonsters() {
-        val types = listOf(MonsterType.SLIME, MonsterType.WOLF, MonsterType.SKELETON)
-        repeat(8) {
-            spawnMonster(types.random())
-        }
+        val commonTypes = listOf(MonsterType.SLIME, MonsterType.WOLF, MonsterType.SKELETON, MonsterType.KOBOLD, MonsterType.GNOLL, MonsterType.SPIDER, MonsterType.ZOMBIE, MonsterType.HOBOGOBLIN, MonsterType.STIRGE, MonsterType.SPRITE)
+        val uncommonTypes = listOf(MonsterType.BUGBEAR, MonsterType.OGRE, MonsterType.HARPY, MonsterType.GARGOYLE, MonsterType.MIMIC, MonsterType.GRICK, MonsterType.ETTERCAP, MonsterType.OWLBEAR, MonsterType.GITHYANKI, MonsterType.GITHZERAI)
+        val rareTypes = listOf(MonsterType.TROLL, MonsterType.MINOTAUR, MonsterType.HYDRA, MonsterType.CHIMERA, MonsterType.GRIFFON, MonsterType.MANTICORE, MonsterType.MEDUSA, MonsterType.VAMPIRE, MonsterType.WEREWOLF, MonsterType.WYVERN)
+        val epicTypes = listOf(MonsterType.DRAGON_RED, MonsterType.DRAGON_BLUE, MonsterType.DRAGON_GREEN, MonsterType.BEHOLDER, MonsterType.LICH, MonsterType.DEATH_KNIGHT, MonsterType.PURPLE_WORM, MonsterType.RAKSHASA, MonsterType.DEMON_GLABREZU, MonsterType.DEVIL_HORNED)
+
+        repeat(4) { spawnMonster(commonTypes.random()) }
+        repeat(3) { spawnMonster(uncommonTypes.random()) }
+        repeat(2) { spawnMonster(rareTypes.random()) }
+        if (Random.nextFloat() < 0.3f) spawnMonster(epicTypes.random())
     }
 
     fun spawnMonster(type: MonsterType) {
@@ -204,8 +209,14 @@ class GameWorld(
     private fun checkMonsterSpawns(currentTime: Long) {
         if (currentTime - lastMonsterSpawnTime > monsterSpawnInterval) {
             lastMonsterSpawnTime = currentTime
-            val types = listOf(MonsterType.SLIME, MonsterType.WOLF, MonsterType.SKELETON, MonsterType.BEAR)
-            spawnMonster(types.random())
+            val roll = Random.nextFloat()
+            val type = when {
+                roll < 0.4f -> listOf(MonsterType.SLIME, MonsterType.WOLF, MonsterType.SKELETON, MonsterType.KOBOLD, MonsterType.GNOLL, MonsterType.SPIDER, MonsterType.ZOMBIE, MonsterType.HOBOGOBLIN, MonsterType.STIRGE, MonsterType.SPRITE).random()
+                roll < 0.7f -> listOf(MonsterType.BUGBEAR, MonsterType.OGRE, MonsterType.HARPY, MonsterType.GARGOYLE, MonsterType.MIMIC, MonsterType.GRICK, MonsterType.ETTERCAP, MonsterType.OWLBEAR, MonsterType.GITHYANKI, MonsterType.GITHZERAI).random()
+                roll < 0.9f -> listOf(MonsterType.TROLL, MonsterType.MINOTAUR, MonsterType.HYDRA, MonsterType.CHIMERA, MonsterType.GRIFFON, MonsterType.MANTICORE, MonsterType.MEDUSA, MonsterType.VAMPIRE, MonsterType.WEREWOLF, MonsterType.WYVERN).random()
+                else -> listOf(MonsterType.DRAGON_RED, MonsterType.DRAGON_BLUE, MonsterType.DRAGON_GREEN, MonsterType.BEHOLDER, MonsterType.LICH, MonsterType.DEATH_KNIGHT, MonsterType.PURPLE_WORM, MonsterType.RAKSHASA, MonsterType.DEMON_GLABREZU, MonsterType.DEVIL_HORNED).random()
+            }
+            spawnMonster(type)
         }
     }
 

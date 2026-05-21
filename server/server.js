@@ -8,11 +8,118 @@ const players = new Map();
 const monsters = new Map();
 
 const MONSTER_TYPES = {
-  SLIME:    { name: 'Slime',    baseHp: 30,  baseAtk: 5,  baseDef: 2,  xpReward: 10,  aggressionRange: 150 },
-  WOLF:     { name: 'Lobo',     baseHp: 50,  baseAtk: 10, baseDef: 5,  xpReward: 25,  aggressionRange: 200 },
-  BEAR:     { name: 'Oso',      baseHp: 100, baseAtk: 15, baseDef: 10, xpReward: 50,  aggressionRange: 180 },
-  SKELETON: { name: 'Esqueleto',baseHp: 70,  baseAtk: 12, baseDef: 8,  xpReward: 35,  aggressionRange: 250 },
-  DRAGON:   { name: 'Dragón',   baseHp: 200, baseAtk: 25, baseDef: 15, xpReward: 100, aggressionRange: 300 }
+  ABERRATION:     { name: 'Aberración',        baseHp: 60,  baseAtk: 12, baseDef: 8,  xpReward: 30,  aggressionRange: 200 },
+  ANKHEG:         { name: 'Ankheg',            baseHp: 80,  baseAtk: 18, baseDef: 12, xpReward: 50,  aggressionRange: 220 },
+  BASILISK:       { name: 'Basilisco',         baseHp: 90,  baseAtk: 15, baseDef: 14, xpReward: 45,  aggressionRange: 180 },
+  BEAR:           { name: 'Oso',               baseHp: 100, baseAtk: 15, baseDef: 10, xpReward: 50,  aggressionRange: 180 },
+  BEHOLDER:       { name: 'Contemplador',      baseHp: 250, baseAtk: 30, baseDef: 20, xpReward: 150, aggressionRange: 350 },
+  BUGBEAR:        { name: 'Bugbear',           baseHp: 45,  baseAtk: 10, baseDef: 6,  xpReward: 20,  aggressionRange: 170 },
+  CENTAUR:        { name: 'Centauro',          baseHp: 70,  baseAtk: 14, baseDef: 8,  xpReward: 35,  aggressionRange: 250 },
+  CHIMERA:        { name: 'Quimera',           baseHp: 130, baseAtk: 22, baseDef: 15, xpReward: 80,  aggressionRange: 280 },
+  COCKATRICE:     { name: 'Cocatriz',          baseHp: 50,  baseAtk: 10, baseDef: 8,  xpReward: 25,  aggressionRange: 160 },
+  COUATL:         { name: 'Couatl',            baseHp: 120, baseAtk: 18, baseDef: 16, xpReward: 70,  aggressionRange: 300 },
+  DARKWEIR:       { name: 'Espectro Oscuro',   baseHp: 55,  baseAtk: 14, baseDef: 6,  xpReward: 30,  aggressionRange: 200 },
+  DEATH_KNIGHT:   { name: 'Caballero Muerte',  baseHp: 200, baseAtk: 28, baseDef: 22, xpReward: 120, aggressionRange: 320 },
+  DEMON_GLABREZU: { name: 'Glabrezu',          baseHp: 180, baseAtk: 25, baseDef: 18, xpReward: 100, aggressionRange: 300 },
+  DEMON_HEZROU:   { name: 'Hezrou',            baseHp: 150, baseAtk: 22, baseDef: 16, xpReward: 85,  aggressionRange: 280 },
+  DEVIL_BONE:     { name: 'Diablo Huesos',     baseHp: 100, baseAtk: 18, baseDef: 14, xpReward: 60,  aggressionRange: 250 },
+  DEVIL_HORNED:   { name: 'Diablo Cornudo',    baseHp: 160, baseAtk: 24, baseDef: 18, xpReward: 90,  aggressionRange: 290 },
+  DEVIL_IMP:      { name: 'Diablillo',         baseHp: 30,  baseAtk: 8,  baseDef: 4,  xpReward: 15,  aggressionRange: 140 },
+  DISPLACER:      { name: 'Bestia Displacer',  baseHp: 85,  baseAtk: 16, baseDef: 12, xpReward: 45,  aggressionRange: 230 },
+  DRAGON_BLACK:   { name: 'Dragón Negro',      baseHp: 220, baseAtk: 28, baseDef: 18, xpReward: 120, aggressionRange: 320 },
+  DRAGON_BLUE:    { name: 'Dragón Azul',       baseHp: 240, baseAtk: 30, baseDef: 20, xpReward: 130, aggressionRange: 340 },
+  DRAGON_BRASS:   { name: 'Dragón Latón',      baseHp: 200, baseAtk: 26, baseDef: 16, xpReward: 110, aggressionRange: 300 },
+  DRAGON_BRONZE:  { name: 'Dragón Bronce',     baseHp: 210, baseAtk: 27, baseDef: 17, xpReward: 115, aggressionRange: 310 },
+  DRAGON_COPPER:  { name: 'Dragón Cobre',      baseHp: 190, baseAtk: 25, baseDef: 15, xpReward: 105, aggressionRange: 290 },
+  DRAGON_GOLD:    { name: 'Dragón Dorado',     baseHp: 260, baseAtk: 32, baseDef: 22, xpReward: 140, aggressionRange: 360 },
+  DRAGON_GREEN:   { name: 'Dragón Verde',      baseHp: 230, baseAtk: 29, baseDef: 19, xpReward: 125, aggressionRange: 330 },
+  DRAGON_RED:     { name: 'Dragón Rojo',       baseHp: 280, baseAtk: 35, baseDef: 24, xpReward: 150, aggressionRange: 380 },
+  DRAGON_SILVER:  { name: 'Dragón Plateado',   baseHp: 250, baseAtk: 31, baseDef: 21, xpReward: 135, aggressionRange: 350 },
+  DRAGON_WHITE:   { name: 'Dragón Blanco',     baseHp: 200, baseAtk: 26, baseDef: 16, xpReward: 110, aggressionRange: 300 },
+  DRAGON:         { name: 'Dragón',            baseHp: 200, baseAtk: 25, baseDef: 15, xpReward: 100, aggressionRange: 300 },
+  DRYAD:          { name: 'Dríada',            baseHp: 60,  baseAtk: 10, baseDef: 8,  xpReward: 30,  aggressionRange: 180 },
+  DUODAR:         { name: 'Duodár',            baseHp: 40,  baseAtk: 8,  baseDef: 5,  xpReward: 18,  aggressionRange: 150 },
+  ETTIN:          { name: 'Ettin',             baseHp: 120, baseAtk: 20, baseDef: 14, xpReward: 70,  aggressionRange: 260 },
+  ETTERCAP:       { name: 'Ettercap',          baseHp: 55,  baseAtk: 12, baseDef: 8,  xpReward: 28,  aggressionRange: 190 },
+  GARGOYLE:       { name: 'Gárgola',           baseHp: 75,  baseAtk: 14, baseDef: 12, xpReward: 40,  aggressionRange: 210 },
+  GELATINOUS_CUBE:{ name: 'Cubo Gelatinoso',   baseHp: 90,  baseAtk: 12, baseDef: 10, xpReward: 45,  aggressionRange: 150 },
+  GHAST:          { name: 'Ghast',             baseHp: 60,  baseAtk: 14, baseDef: 8,  xpReward: 32,  aggressionRange: 200 },
+  GHOST:          { name: 'Fantasma',          baseHp: 70,  baseAtk: 16, baseDef: 10, xpReward: 40,  aggressionRange: 240 },
+  GIANT_FIRE:     { name: 'Gigante Fuego',     baseHp: 180, baseAtk: 26, baseDef: 18, xpReward: 100, aggressionRange: 300 },
+  GIANT_FROST:    { name: 'Gigante Escarcha',  baseHp: 170, baseAtk: 24, baseDef: 16, xpReward: 95,  aggressionRange: 290 },
+  GIANT_HILL:     { name: 'Gigante Colina',    baseHp: 140, baseAtk: 20, baseDef: 14, xpReward: 80,  aggressionRange: 270 },
+  GIANT_STONE:    { name: 'Gigante Piedra',    baseHp: 160, baseAtk: 22, baseDef: 16, xpReward: 90,  aggressionRange: 280 },
+  GIANT_STORM:    { name: 'Gigante Tormenta',  baseHp: 200, baseAtk: 28, baseDef: 20, xpReward: 110, aggressionRange: 320 },
+  GIBBERING_MOUTHER:{ name: 'Boca Chillante',  baseHp: 80,  baseAtk: 14, baseDef: 6,  xpReward: 40,  aggressionRange: 180 },
+  GITHYANKI:      { name: 'Githyanki',         baseHp: 65,  baseAtk: 14, baseDef: 10, xpReward: 35,  aggressionRange: 220 },
+  GITHZERAI:      { name: 'Githzerai',         baseHp: 60,  baseAtk: 12, baseDef: 10, xpReward: 32,  aggressionRange: 210 },
+  GNOLL:          { name: 'Gnoll',             baseHp: 40,  baseAtk: 10, baseDef: 5,  xpReward: 20,  aggressionRange: 160 },
+  GOLEM_CLAY:     { name: 'Golem Arcilla',     baseHp: 130, baseAtk: 20, baseDef: 16, xpReward: 75,  aggressionRange: 200 },
+  GOLEM_FLESH:    { name: 'Golem Carne',       baseHp: 110, baseAtk: 18, baseDef: 14, xpReward: 65,  aggressionRange: 220 },
+  GOLEM_IRON:     { name: 'Golem Hierro',      baseHp: 180, baseAtk: 24, baseDef: 20, xpReward: 100, aggressionRange: 250 },
+  GOLEM_STONE:    { name: 'Golem Piedra',      baseHp: 150, baseAtk: 22, baseDef: 18, xpReward: 85,  aggressionRange: 230 },
+  GORGON:         { name: 'Gorgona',           baseHp: 100, baseAtk: 18, baseDef: 14, xpReward: 55,  aggressionRange: 240 },
+  GREEN_HAG:      { name: 'Bruja Verde',       baseHp: 80,  baseAtk: 16, baseDef: 10, xpReward: 45,  aggressionRange: 220 },
+  GRICK:          { name: 'Grick',             baseHp: 45,  baseAtk: 10, baseDef: 8,  xpReward: 22,  aggressionRange: 170 },
+  GRIFFON:        { name: 'Grifo',             baseHp: 90,  baseAtk: 18, baseDef: 12, xpReward: 50,  aggressionRange: 260 },
+  GUARDIAN_NATURE:{ name: 'Guardián Natural',  baseHp: 70,  baseAtk: 12, baseDef: 10, xpReward: 35,  aggressionRange: 190 },
+  GYRENAUT:       { name: 'Gyrenauta',         baseHp: 55,  baseAtk: 12, baseDef: 8,  xpReward: 28,  aggressionRange: 180 },
+  HARPY:          { name: 'Arpía',             baseHp: 50,  baseAtk: 12, baseDef: 6,  xpReward: 25,  aggressionRange: 200 },
+  HELLDON:        { name: 'Helldon',           baseHp: 100, baseAtk: 18, baseDef: 14, xpReward: 55,  aggressionRange: 240 },
+  HIPPOGRIFF:     { name: 'Hipogrifo',         baseHp: 65,  baseAtk: 14, baseDef: 10, xpReward: 35,  aggressionRange: 220 },
+  HOBOGOBLIN:     { name: 'Hobgoblin',         baseHp: 45,  baseAtk: 10, baseDef: 6,  xpReward: 22,  aggressionRange: 170 },
+  HYDRA:          { name: 'Hidra',             baseHp: 160, baseAtk: 22, baseDef: 16, xpReward: 90,  aggressionRange: 280 },
+  INVISIBLE_STALKER:{ name: 'Acechador Invis.',baseHp: 100, baseAtk: 16, baseDef: 12, xpReward: 60,  aggressionRange: 250 },
+  KOBOLD:         { name: 'Kobold',            baseHp: 25,  baseAtk: 6,  baseDef: 3,  xpReward: 12,  aggressionRange: 130 },
+  LICH:           { name: 'Liche',             baseHp: 200, baseAtk: 28, baseDef: 20, xpReward: 120, aggressionRange: 340 },
+  LIZARDMAN:      { name: 'Hombre Lagarto',    baseHp: 50,  baseAtk: 12, baseDef: 8,  xpReward: 25,  aggressionRange: 180 },
+  MANTICORE:      { name: 'Mantícora',         baseHp: 100, baseAtk: 18, baseDef: 14, xpReward: 55,  aggressionRange: 260 },
+  MEDUSA:         { name: 'Medusa',            baseHp: 110, baseAtk: 20, baseDef: 14, xpReward: 65,  aggressionRange: 280 },
+  MIMIC:          { name: 'Mímico',            baseHp: 70,  baseAtk: 14, baseDef: 12, xpReward: 40,  aggressionRange: 150 },
+  MINOTAUR:       { name: 'Minotauro',         baseHp: 120, baseAtk: 20, baseDef: 14, xpReward: 70,  aggressionRange: 260 },
+  MUMMY:          { name: 'Momia',             baseHp: 90,  baseAtk: 16, baseDef: 12, xpReward: 50,  aggressionRange: 220 },
+  NIGHTMARE:      { name: 'Pesadilla',         baseHp: 80,  baseAtk: 16, baseDef: 10, xpReward: 45,  aggressionRange: 240 },
+  OCHRE_JELLY:    { name: 'Gelatina Ocre',     baseHp: 75,  baseAtk: 12, baseDef: 10, xpReward: 38,  aggressionRange: 160 },
+  OGRE:           { name: 'Ogro',              baseHp: 80,  baseAtk: 16, baseDef: 10, xpReward: 45,  aggressionRange: 200 },
+  ONI:            { name: 'Oni',               baseHp: 110, baseAtk: 20, baseDef: 14, xpReward: 65,  aggressionRange: 260 },
+  Ooze:           { name: 'Cieno',             baseHp: 60,  baseAtk: 10, baseDef: 8,  xpReward: 30,  aggressionRange: 140 },
+  OWLBEAR:        { name: 'Oso Búho',          baseHp: 90,  baseAtk: 18, baseDef: 12, xpReward: 50,  aggressionRange: 240 },
+  PEGASUS:        { name: 'Pegaso',            baseHp: 70,  baseAtk: 14, baseDef: 10, xpReward: 38,  aggressionRange: 260 },
+  PHASE_SPIDER:   { name: 'Araña de Fase',     baseHp: 55,  baseAtk: 14, baseDef: 8,  xpReward: 30,  aggressionRange: 200 },
+  PURPLE_WORM:    { name: 'Gusano Púrpura',    baseHp: 200, baseAtk: 26, baseDef: 20, xpReward: 110, aggressionRange: 280 },
+  RAKSHASA:       { name: 'Rakshasa',          baseHp: 130, baseAtk: 22, baseDef: 16, xpReward: 80,  aggressionRange: 300 },
+  REMORHAZ:       { name: 'Remorhaz',          baseHp: 150, baseAtk: 24, baseDef: 18, xpReward: 85,  aggressionRange: 270 },
+  ROCS:           { name: 'Roc',               baseHp: 180, baseAtk: 24, baseDef: 18, xpReward: 100, aggressionRange: 300 },
+  ROPER:          { name: 'Roper',             baseHp: 100, baseAtk: 18, baseDef: 14, xpReward: 55,  aggressionRange: 200 },
+  RUST_MONSTER:   { name: 'Monstruo Oxidado',  baseHp: 60,  baseAtk: 12, baseDef: 10, xpReward: 32,  aggressionRange: 180 },
+  SAHUAGIN:       { name: 'Sahuagin',          baseHp: 45,  baseAtk: 10, baseDef: 6,  xpReward: 22,  aggressionRange: 170 },
+  SALAMANDER:     { name: 'Salamandra',        baseHp: 120, baseAtk: 20, baseDef: 14, xpReward: 70,  aggressionRange: 260 },
+  SATYR:          { name: 'Sátiro',            baseHp: 50,  baseAtk: 10, baseDef: 6,  xpReward: 25,  aggressionRange: 180 },
+  SCORPION:       { name: 'Escorpión Gigante', baseHp: 40,  baseAtk: 10, baseDef: 8,  xpReward: 20,  aggressionRange: 160 },
+  SHADOW:         { name: 'Sombra',            baseHp: 45,  baseAtk: 12, baseDef: 6,  xpReward: 22,  aggressionRange: 190 },
+  SHIELD_GUARDIAN:{ name: 'Guardián Escudo',   baseHp: 140, baseAtk: 20, baseDef: 18, xpReward: 80,  aggressionRange: 250 },
+  SKELETON:       { name: 'Esqueleto',         baseHp: 70,  baseAtk: 12, baseDef: 8,  xpReward: 35,  aggressionRange: 250 },
+  SLIME:          { name: 'Slime',             baseHp: 30,  baseAtk: 5,  baseDef: 2,  xpReward: 10,  aggressionRange: 150 },
+  SPECTATOR:      { name: 'Espectador',        baseHp: 80,  baseAtk: 14, baseDef: 10, xpReward: 42,  aggressionRange: 220 },
+  SPECTER:        { name: 'Espectro',          baseHp: 50,  baseAtk: 12, baseDef: 6,  xpReward: 25,  aggressionRange: 210 },
+  SPIDER:         { name: 'Araña Gigante',     baseHp: 35,  baseAtk: 8,  baseDef: 4,  xpReward: 18,  aggressionRange: 150 },
+  SPRITE:         { name: 'Duendecillo',       baseHp: 20,  baseAtk: 6,  baseDef: 3,  xpReward: 10,  aggressionRange: 120 },
+  STIRGE:         { name: 'Stirge',            baseHp: 30,  baseAtk: 8,  baseDef: 4,  xpReward: 15,  aggressionRange: 140 },
+  TREANT:         { name: 'Treant',            baseHp: 160, baseAtk: 22, baseDef: 18, xpReward: 90,  aggressionRange: 220 },
+  TRIPLE:         { name: 'Triple',            baseHp: 90,  baseAtk: 16, baseDef: 12, xpReward: 48,  aggressionRange: 240 },
+  TROLL:          { name: 'Troll',             baseHp: 110, baseAtk: 18, baseDef: 12, xpReward: 65,  aggressionRange: 250 },
+  UNICORN:        { name: 'Unicornio',         baseHp: 100, baseAtk: 16, baseDef: 14, xpReward: 60,  aggressionRange: 280 },
+  VAMPIRE:        { name: 'Vampiro',           baseHp: 180, baseAtk: 26, baseDef: 18, xpReward: 100, aggressionRange: 320 },
+  WEREWOLF:       { name: 'Hombre Lobo',       baseHp: 90,  baseAtk: 18, baseDef: 12, xpReward: 55,  aggressionRange: 260 },
+  WIGHT:          { name: 'Espectro Hielo',    baseHp: 70,  baseAtk: 14, baseDef: 10, xpReward: 40,  aggressionRange: 230 },
+  WILL_O_WISP:    { name: 'Will-o-Wisp',       baseHp: 35,  baseAtk: 10, baseDef: 4,  xpReward: 18,  aggressionRange: 180 },
+  WOLF:           { name: 'Lobo',              baseHp: 50,  baseAtk: 10, baseDef: 5,  xpReward: 25,  aggressionRange: 200 },
+  WRAITH:         { name: 'Ánima',             baseHp: 100, baseAtk: 18, baseDef: 14, xpReward: 60,  aggressionRange: 270 },
+  WYVERN:         { name: 'Wyvern',            baseHp: 130, baseAtk: 22, baseDef: 16, xpReward: 75,  aggressionRange: 290 },
+  XORN:           { name: 'Xorn',              baseHp: 80,  baseAtk: 16, baseDef: 12, xpReward: 45,  aggressionRange: 200 },
+  YETI:           { name: 'Yeti',              baseHp: 90,  baseAtk: 16, baseDef: 12, xpReward: 50,  aggressionRange: 240 },
+  YUAN_TI:        { name: 'Yuan-ti',           baseHp: 75,  baseAtk: 14, baseDef: 10, xpReward: 40,  aggressionRange: 220 },
+  ZOMBIE:         { name: 'Zombi',             baseHp: 55,  baseAtk: 8,  baseDef: 6,  xpReward: 25,  aggressionRange: 140 }
 };
 
 const WORLD_WIDTH = 800;
@@ -25,9 +132,51 @@ function distance(x1, y1, x2, y2) {
 
 function spawnMonster() {
   if (monsters.size >= MAX_MONSTERS) return;
-  const types = Object.keys(MONSTER_TYPES);
-  const typeKey = types[Math.floor(Math.random() * types.length)];
+
+  const roll = Math.random();
+  let pool;
+  if (roll < 0.4) {
+    pool = ['SLIME', 'WOLF', 'SKELETON', 'KOBOLD', 'GNOLL', 'SPIDER', 'ZOMBIE', 'HOBOGOBLIN', 'STIRGE', 'SPRITE'];
+  } else if (roll < 0.7) {
+    pool = ['BUGBEAR', 'OGRE', 'HARPY', 'GARGOYLE', 'MIMIC', 'GRICK', 'ETTERCAP', 'OWLBEAR', 'GITHYANKI', 'GITHZERAI'];
+  } else if (roll < 0.9) {
+    pool = ['TROLL', 'MINOTAUR', 'HYDRA', 'CHIMERA', 'GRIFFON', 'MANTICORE', 'MEDUSA', 'VAMPIRE', 'WEREWOLF', 'WYVERN'];
+  } else {
+    pool = ['DRAGON_RED', 'DRAGON_BLUE', 'DRAGON_GREEN', 'BEHOLDER', 'LICH', 'DEATH_KNIGHT', 'PURPLE_WORM', 'RAKSHASA', 'DEMON_GLABREZU', 'DEVIL_HORNED'];
+  }
+
+  const typeKey = pool[Math.floor(Math.random() * pool.length)];
+  spawnMonsterOfType(typeKey);
+}
+
+function spawnInitialMonsters() {
+  const commonTypes = ['SLIME', 'WOLF', 'SKELETON', 'KOBOLD', 'GNOLL', 'SPIDER', 'ZOMBIE', 'GOBLIN', 'HOBOGOBLIN', 'STIRGE'];
+  const uncommonTypes = ['BUGBEAR', 'OGRE', 'GHOUL', 'GHAST', 'HARPY', 'GARGOYLE', 'MIMIC', 'GRICK', 'ETTERCAP', 'OWLBEAR'];
+  const rareTypes = ['TROLL', 'MINOTAUR', 'HYDRA', 'CHIMERA', 'GRIFFON', 'MANTICORE', 'MEDUSA', 'VAMPIRE', 'WEREWOLF', 'WYVERN'];
+  const epicTypes = ['DRAGON_RED', 'DRAGON_BLUE', 'DRAGON_GREEN', 'DRAGON_BLACK', 'DRAGON_WHITE', 'DRAGON_GOLD', 'BEHOLDER', 'LICH', 'DEATH_KNIGHT', 'PURPLE_WORM'];
+
+  for (let i = 0; i < 4; i++) {
+    const type = commonTypes[Math.floor(Math.random() * commonTypes.length)];
+    spawnMonsterOfType(type);
+  }
+  for (let i = 0; i < 3; i++) {
+    const type = uncommonTypes[Math.floor(Math.random() * uncommonTypes.length)];
+    spawnMonsterOfType(type);
+  }
+  for (let i = 0; i < 2; i++) {
+    const type = rareTypes[Math.floor(Math.random() * rareTypes.length)];
+    spawnMonsterOfType(type);
+  }
+  if (Math.random() < 0.3) {
+    const type = epicTypes[Math.floor(Math.random() * epicTypes.length)];
+    spawnMonsterOfType(type);
+  }
+}
+
+function spawnMonsterOfType(typeKey) {
+  if (monsters.size >= MAX_MONSTERS) return;
   const type = MONSTER_TYPES[typeKey];
+  if (!type) return;
   const level = Math.floor(Math.random() * 3) + 1;
   const id = 'm_' + crypto.randomUUID().slice(0, 8);
   const monster = {
@@ -48,10 +197,6 @@ function spawnMonster() {
   };
   monsters.set(id, monster);
   broadcast({ type: 'MonsterSpawned', monsterId: id, type: type.name, x: monster.x, y: monster.y, level, hp: monster.hp, maxHp: monster.maxHp });
-}
-
-function spawnInitialMonsters() {
-  for (let i = 0; i < 8; i++) spawnMonster();
 }
 
 function broadcast(message, excludeId = null) {

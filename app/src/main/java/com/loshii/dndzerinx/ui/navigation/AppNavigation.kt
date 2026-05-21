@@ -41,8 +41,8 @@ import com.loshii.dndzerinx.ui.screens.auth.AuthScreen
 import com.loshii.dndzerinx.ui.screens.chat.ChatScreen
 import com.loshii.dndzerinx.ui.screens.home.HomeScreen
 import com.loshii.dndzerinx.ui.screens.library.ClassLibraryScreen
+import com.loshii.dndzerinx.ui.screens.profile.LocalProfileScreen
 import com.loshii.dndzerinx.ui.screens.profile.CharacterScreen
-import com.loshii.dndzerinx.ui.screens.profile.ProfileScreen
 import com.loshii.dndzerinx.ui.screens.settings.SettingsScreen
 import com.loshii.dndzerinx.ui.screens.game.GameWorldScreen
 import com.loshii.dndzerinx.viewmodel.AuthViewModel
@@ -68,7 +68,7 @@ fun AppNavigation() {
     val currentRoute = navBackStackEntry?.destination?.route ?: ""
     val auth = FirebaseAuth.getInstance()
     val authViewModel: AuthViewModel = viewModel()
-    val startDestination = if (auth.currentUser != null) Screen.Home.route else Screen.Auth.route
+    val startDestination = if (auth.currentUser != null) Screen.GameWorld.route else Screen.Auth.route
 
     val showBottomBar = currentRoute in bottomNavRoutes
     var isBottomNavVisible by remember { mutableStateOf(true) }
@@ -91,8 +91,26 @@ fun AppNavigation() {
                 AuthScreen(
                     viewModel = authViewModel,
                     onAuthenticated = {
-                        navController.navigate(Screen.Home.route) {
+                        navController.navigate(Screen.GameWorld.route) {
                             popUpTo(Screen.Auth.route) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
+            composable(Screen.GameWorld.route) {
+                GameWorldScreen(
+                    viewModel = authViewModel,
+                    onNavigateToProfile = {
+                        navController.navigate(Screen.Profile.route)
+                    },
+                    onNavigateToSettings = {
+                        navController.navigate(Screen.Settings.route)
+                    },
+                    onSignOut = {
+                        auth.signOut()
+                        navController.navigate(Screen.Auth.route) {
+                            popUpTo(0) { inclusive = true }
                         }
                     }
                 )
@@ -123,7 +141,7 @@ fun AppNavigation() {
             }
 
             composable(Screen.Profile.route) {
-                ProfileScreen(
+                LocalProfileScreen(
                     viewModel = authViewModel,
                     onBack = { navController.popBackStack() },
                     onSettings = { navController.navigate(Screen.Settings.route) },
@@ -147,13 +165,6 @@ fun AppNavigation() {
                             popUpTo(0) { inclusive = true }
                         }
                     }
-                )
-            }
-
-            composable(Screen.GameWorld.route) {
-                GameWorldScreen(
-                    onBack = { navController.popBackStack() },
-                    viewModel = authViewModel
                 )
             }
         }
